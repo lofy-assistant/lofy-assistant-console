@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import { Geist, Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -22,16 +23,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning className={inter.variable}>
-      <body
-        className={`${geistSans.variable} antialiased`}
-      >
+      <body className={`${geistSans.variable} antialiased`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <TooltipProvider>{children}</TooltipProvider>
         </ThemeProvider>
       </body>
     </html>
