@@ -1,0 +1,193 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model users {
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  encrypted_phone String
+  hashed_phone    String
+  pin             String?
+  email           String?           @unique
+  name            String?
+  role            Int               @default(1)
+  metadata        Json?
+  created_at      DateTime          @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @db.Timestamptz(6)
+  updated_at      DateTime          @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @updatedAt @db.Timestamptz(6)
+  calendar_events calendar_events[]
+  feedbacks       feedbacks[]
+  integration_credentials integration_credentials[]
+  memories        memories[]
+  reminders       reminders[]
+  subscriptions   subscriptions[]
+  ai_persona      String?           
+
+  @@index([email])
+  @@map("users")
+}
+
+model feedbacks {
+  id          Int      @id @default(autoincrement())
+  user_id     String   @db.Uuid
+  title       String
+  description String?
+  tag         String
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @updatedAt @db.Timestamptz(6)
+  user        users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([tag])
+  @@map("feedbacks")
+}
+
+model memories {
+  id         Int                    @id @default(autoincrement())
+  user_id    String                 @db.Uuid
+  title      String?
+  content    String
+  created_at DateTime               @default(now()) @db.Timestamptz(6)
+  updated_at DateTime               @updatedAt @db.Timestamptz(6)
+  embedding  Unsupported("vector")?
+  user       users                  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("memories")
+}
+
+model calendar_events {
+  id          Int        @id @default(autoincrement())
+  user_id     String     @db.Uuid
+  title       String
+  description String?
+  start_time  DateTime   @db.Timestamptz(6)
+  end_time    DateTime   @db.Timestamptz(6)
+  timezone    String
+  is_all_day  Boolean    @default(false)
+  created_at      DateTime   @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime   @updatedAt @db.Timestamptz(6)
+  reminder_id     Int?
+  recurrence      String? // RRULE format
+  next_recurrence DateTime?  @db.Timestamptz(6)
+  google_event_id String?
+  reminders   reminders? @relation(fields: [reminder_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user        users      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([start_time])
+  @@index([end_time])
+  @@index([next_recurrence])
+  @@map("calendar_events")
+}
+
+model reminders {
+  id              Int               @id @default(autoincrement())
+  user_id         String            @db.Uuid
+  message         String
+  reminder_time   DateTime          @db.Timestamptz(6)
+  status          String
+  created_at      DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime          @updatedAt @db.Timestamptz(6)
+  recurrence      String? // RRULE format
+  next_recurrence DateTime?         @db.Timestamptz(6)
+  calendar_events calendar_events[]
+  user            users             @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([reminder_time])
+  @@index([status])
+  @@index([next_recurrence])
+  @@map("reminders")
+}
+
+model subscriptions {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id              String   @db.Uuid
+  stripe_customer_id   String   @unique
+  stripe_price_id      String
+  subscription_status  String
+  current_period_end   DateTime @db.Timestamptz(6)
+  created_at           DateTime @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime @updatedAt @db.Timestamptz(6)
+  user                 users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([subscription_status])
+  @@map("subscriptions")
+}
+
+model integration_credentials {
+  id                  Int    @id @default(autoincrement())
+  user_id             String @db.Uuid
+  provider_name       String
+  external_id         String?
+  credentials         Json @default(dbgenerated("'{}'::jsonb"))
+  created_at          DateTime @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime @updatedAt @db.Timestamptz(6)
+
+  user                users          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  integrations integrations[]
+
+  @@unique([user_id, external_id])
+  @@index([user_id])
+  @@map("integration_credentials")
+}
+
+model integrations {
+  id                  Int    @id @default(autoincrement())
+  credential_id       Int
+  integration_type    String  
+  settings            Json @default(dbgenerated("'{}'::jsonb"))
+  is_active           Boolean  @default(true)
+  created_at          DateTime @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime @updatedAt @db.Timestamptz(6)
+
+  credential          integration_credentials @relation(fields: [credential_id], references: [id], onDelete: Cascade)
+
+  @@index([credential_id])
+  @@map("integrations")
+}
+
+model upvotes {
+  id             Int      @id @default(autoincrement())
+  user_id        String   @db.Uuid
+  integration_id String  
+  created_at     DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([user_id, integration_id])
+  @@index([user_id])
+  @@map("upvotes")
+}
+
+model upvote_counts {
+  id             Int    @id @default(autoincrement())
+  integration_id String @unique
+  count          Int    @default(0)
+
+  @@map("upvote_counts")
+}
+
+model lofy_team {
+  id            Int       @id @default(autoincrement())
+  lofy_id       String    @unique @db.Uuid
+  name          String
+  display_name  String?
+  email         String    @unique
+  role_id       Int       
+  is_active     Boolean   @default(true)       
+  password_hash String?                       
+  last_login_at DateTime? @db.Timestamptz(6)
+  phone         String?   @db.VarChar(20)
+  timezone      String?   @default("Asia/Kuala_Lumpur")       
+  department    String?                         
+  position      String?                         
+  created_at    DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime  @updatedAt @db.Timestamptz(6)
+  deleted_at    DateTime? @db.Timestamptz(6)    
+
+  @@map("lofy_team")
+}
