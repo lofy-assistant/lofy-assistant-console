@@ -2,23 +2,31 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/database';
 import { createSession, setSessionCookie } from '@/lib/session';
 import bcrypt from 'bcrypt';
+import { loginSchema } from '@/lib/schemas/login';
 
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { lofy_id, password } = body;
+        const parsed = loginSchema.safeParse(body);
 
-        // Validate input
-        if (!lofy_id || !password) {
+        if (!parsed.success) {
+            const first = parsed.error.issues[0];
             return NextResponse.json(
-                { error: 'Invalid credentials.' },
+                { error: first?.message || 'Invalid input' },
                 { status: 400 }
             );
         }
 
-        // Query the lofy_team table for the member
-        const member = await prisma.lofy_team.findUnique({
-            where: { lofy_id },
+        const { identifier, password } = parsed.data;
+
+        // Query the lofy_team table for the member by email or lofy_id
+        const member = await prisma.lofy_team.findFirst({
+            where: {
+                OR: [
+                    { email: identifier },
+                    { lofy_id: identifier },
+                ],
+            },
         });
 
         // Generic error — do not reveal whether the ID or password was wrong
@@ -53,7 +61,7 @@ export async function POST(request: Request) {
 
         // Update last_login_at
         await prisma.lofy_team.update({
-            where: { lofy_id },
+            where: { id: member.id },
             data: { last_login_at: new Date() },
         });
 

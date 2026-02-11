@@ -110,15 +110,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       })
       .then((data) => {
         if (!mounted) return;
-        const team = data?.team;
         const sessionUser = data?.user;
-        if (team) {
-          setUser({
-            name: team.display_name ?? team.name ?? sessionUser?.name ?? initialUser.name,
-            email: team.email ?? sessionUser?.email ?? initialUser.email,
-            avatar: initialUser.avatar,
-          });
-        } else if (sessionUser) {
+        if (sessionUser) {
           setUser({
             name: sessionUser.displayName ?? sessionUser.name ?? initialUser.name,
             email: initialUser.email,
