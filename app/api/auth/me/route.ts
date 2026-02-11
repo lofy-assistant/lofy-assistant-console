@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/session';
+import { prisma } from '@/lib/database';
 
 export async function GET() {
     const session = await getSessionFromCookie();
@@ -11,6 +12,16 @@ export async function GET() {
         );
     }
 
+    // Fetch team info from database using the lofyId from session
+    const team = await prisma.lofy_team.findUnique({
+        where: { lofy_id: session.lofyId },
+        select: {
+            name: true,
+            display_name: true,
+            email: true,
+        },
+    });
+
     return NextResponse.json({
         user: {
             userId: session.userId,
@@ -19,5 +30,6 @@ export async function GET() {
             displayName: session.displayName,
             role: session.role,
         },
+        team: team ?? null,
     });
 }
