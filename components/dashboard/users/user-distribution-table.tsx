@@ -49,6 +49,7 @@ export function UserDistributionTable({ data }: UserDistributionTableProps) {
   return (
     <Card className="overflow-hidden">
       <div className="overflow-x-auto">
+        <p className="pb-5 pt-2 text-center text-sm font-semibold">User x Country Distribution</p>
         <table className="w-full">
           <thead className="bg-muted/50">
             <tr>

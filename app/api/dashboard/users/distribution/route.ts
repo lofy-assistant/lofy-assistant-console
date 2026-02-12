@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { connectMongo } from '@/lib/database';
+import { connectMongo, prisma } from '@/lib/database';
 import User from '@/lib/models/User';
 import { getCountryFromTimezone } from '@/lib/timezone-mapping';
 
