@@ -26,75 +26,79 @@ const initialUser = {
   avatar: "/avatars/shadcn.jpg",
 };
 const navMain = [
-    {
-      title: "Overview",
-      url: "/dashboard/overview",
-      icon: <TerminalSquareIcon />,
-      isActive: true,
-      items: [
-        {
-          title: "Users",
-          url: "/dashboard/overview/users",
-        },
-        {
-          title: "Messages",
-          url: "/dashboard/overview/messages",
-        },
-        {
-          title: "Calendar Events",
-          url: "/dashboard/overview/events",
-        },
-        {
-          title: "Reminders",
-          url: "/dashboard/overview/reminders",
-        },
-        {
-          title: "Memories",
-          url: "/dashboard/overview/memories",
-        },
-      ],
-    },
-    {
-      title: "Logs",
-      url: "/dashboard/logs",
-      icon: <BotIcon />,
-      items: [
-        {
-          title: "Activity",
-          url: "/dashboard/logs/activity",
-        },
-        {
-          title: "Integrations",
-          url: "/dashboard/logs/integrations",
-        },
-      ],
-    },
-    {
-      title: "Finance",
-      url: "/dashboard/finance",
-      icon: <BookOpenIcon />,
-      items: [
-        {
-          title: "General",
-          url: "/dashboard/finance/general",
-        },
-        {
-          title: "Subscriptions",
-          url: "/dashboard/finance/subscriptions",
-        },
-      ],
-    },
-    {
-      title: "Debug Panel",
-      url: "/dashboard/debug",
-      icon: <Settings2Icon />,
-      items: [
-        {
-          title: "General",
-          url: "/dashboard/debug/general",
-        },
-      ],
-    },
+  {
+    title: "Overview",
+    url: "/dashboard/overview",
+    icon: <TerminalSquareIcon />,
+    isActive: true,
+    items: [
+      {
+        title: "Users",
+        url: "/dashboard/overview/users",
+      },
+      {
+        title: "Messages",
+        url: "/dashboard/overview/messages",
+      },
+      {
+        title: "Calendar Events",
+        url: "/dashboard/overview/events",
+      },
+      {
+        title: "Reminders",
+        url: "/dashboard/overview/reminders",
+      },
+      {
+        title: "Memories",
+        url: "/dashboard/overview/memories",
+      },
+    ],
+  },
+  {
+    title: "Logs",
+    url: "/dashboard/logs",
+    icon: <BotIcon />,
+    items: [
+      {
+        title: "Activity",
+        url: "/dashboard/logs/activity",
+      },
+      {
+        title: "Integrations",
+        url: "/dashboard/logs/integrations",
+      },
+    ],
+  },
+  {
+    title: "Finance",
+    url: "/dashboard/finance",
+    icon: <BookOpenIcon />,
+    items: [
+      {
+        title: "General",
+        url: "/dashboard/finance/general",
+      },
+      {
+        title: "Subscriptions",
+        url: "/dashboard/finance/subscriptions",
+      },
+    ],
+  },
+  {
+    title: "Debug Panel",
+    url: "/dashboard/debug",
+    icon: <Settings2Icon />,
+    items: [
+      {
+        title: "General",
+        url: "/dashboard/debug/general",
+      },
+      {
+        title: "Playground",
+        url: "/dashboard/debug/playground",
+      },
+    ],
+  },
 ];
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -131,7 +135,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <div className="flex items-center gap-2 px-3">
+        <div className="flex items-center gap-2 p-3">
           <GalleryVerticalEndIcon />
           <span className="text-sm font-semibold">Lofy</span>
         </div>
