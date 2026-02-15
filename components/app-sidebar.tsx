@@ -42,7 +42,7 @@ const navMain = [
         },
         {
           title: "Calendar Events",
-          url: "/dashboard/overview/calendar-events",
+          url: "/dashboard/overview/events",
         },
         {
           title: "Reminders",

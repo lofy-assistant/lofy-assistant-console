@@ -1,8 +1,14 @@
+import { RemindersAggregation } from '@/components/dashboard/reminders/aggregation';
+import { ReminderGraph } from '@/components/dashboard/reminders/graph';
+
 export default function Page() {
 	return (
 		<div className="p-4">
-			<h1 className="text-2xl font-semibold">Overview — Reminders</h1>
-			<p className="mt-2 text-sm text-muted-foreground">Placeholder page.</p>
+			<h1 className="text-xl font-semibold mb-6">Overview — Reminders</h1>
+			<div className="space-y-6">
+				<RemindersAggregation />
+				<ReminderGraph />
+			</div>
 		</div>
 	);
 }

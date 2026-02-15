@@ -1,6 +1,5 @@
 "use client"
 
-import { useEffect } from "react"
 import { Pie, PieChart } from "recharts"
 
 import {
@@ -36,7 +35,6 @@ const q1Options = [
   "part-time",
   "self-employed",
   "neet",
-  "other",
 ]
 
 const q2Options = [
@@ -83,7 +81,7 @@ function countOptions(metadatas: UserMetadata[] | undefined, key: keyof Onboardi
   return options.map((opt, i) => ({ name: opt, value: counts[opt] ?? 0, fill: optionColors[i % optionColors.length] }))
 }
 
-export function ChartOnboardingPie({ q1Data, q2Data }: { q1Data?: { name: string; value: number }[]; q2Data?: { name: string; value: number }[] }) {
+export function UserGraph({ q1Data, q2Data }: { q1Data?: { name: string; value: number }[]; q2Data?: { name: string; value: number }[] }) {
   // Sample data for fallback when no real data is available
   const sampleQ1 = countOptions([
     { onboarding: { question1: "student", question2: "search-engine" } },
@@ -103,13 +101,13 @@ export function ChartOnboardingPie({ q1Data, q2Data }: { q1Data?: { name: string
   const dataQ2Final = q2Data ? q2Data.map((d, i) => ({ ...d, fill: optionColors[i % optionColors.length] })) : sampleQ2
 
   return (
-    <Card className="flex flex-col">
-      <CardHeader className="items-center pb-0">
-        <CardTitle>Onboarding: Question 1 & Question 2</CardTitle>
-        <CardDescription>Breakdown from users metadata</CardDescription>
-      </CardHeader>
-      <CardContent className="flex-1 pb-0">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <Card className="flex flex-col">
+        <CardHeader className="items-center pb-0">
+          <CardTitle>What is your professional background?</CardTitle>
+          <CardDescription>Onboarding question 1</CardDescription>
+        </CardHeader>
+        <CardContent className="flex-1 pb-4">
           <div className="w-full min-h-[300px]">
             <ChartContainer config={chartConfig} className="mx-auto aspect-square max-h-[300px]">
               <PieChart>
@@ -126,7 +124,15 @@ export function ChartOnboardingPie({ q1Data, q2Data }: { q1Data?: { name: string
               </PieChart>
             </ChartContainer>
           </div>
+        </CardContent>
+      </Card>
 
+      <Card className="flex flex-col">
+        <CardHeader className="items-center pb-0">
+          <CardTitle>Where did you know Lofy from?</CardTitle>
+          <CardDescription>Onboarding question 2</CardDescription>
+        </CardHeader>
+        <CardContent className="flex-1 pb-4">
           <div className="w-full min-h-[300px]">
             <ChartContainer config={chartConfig} className="mx-auto aspect-square max-h-[300px]">
               <PieChart>
@@ -143,8 +149,8 @@ export function ChartOnboardingPie({ q1Data, q2Data }: { q1Data?: { name: string
               </PieChart>
             </ChartContainer>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   )
 }

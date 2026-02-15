@@ -1,95 +1,108 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { UserDistributionData } from "@/app/api/dashboard/users/distribution/route";
-import { UserDistributionTable } from "@/components/dashboard/users/user-distribution-table";
-import { Card } from "@/components/ui/card";
-import { ChartOnboardingPie } from "@/components/dashboard/users/pie-chart-legend";
-import { UserStats } from "@/components/dashboard/users/stats";
+import { useRouter } from "next/navigation";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export default function Page() {
-  const [data, setData] = useState<UserDistributionData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [q1Data, setQ1Data] = useState<{ name: string; value: number }[] | null>(null);
-  const [q2Data, setQ2Data] = useState<{ name: string; value: number }[] | null>(null);
-
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        setLoading(true);
-        const response = await fetch("/api/dashboard/users/distribution");
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch user distribution data");
-        }
-
-        const result = await response.json();
-
-        if (result.success) {
-          setData(result.data);
-          
-          // Fetch chart-aggregated data
-          try {
-            const res = await fetch('/api/dashboard/users/chart')
-            if (res.ok) {
-              const json = await res.json()
-              if (json.success) {
-                setQ1Data(json.q1 ?? null)
-                setQ2Data(json.q2 ?? null)
-              }
-            }
-          } catch {
-            // Ignore chart fetch errors; chart will fallback to sample data
-          }
-        } else {
-          throw new Error(result.error || "Unknown error");
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load data");
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchData();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="p-6">
-        <h1 className="text-3xl font-bold mb-6">Learn about the users.</h1>
-        <div className="flex items-center justify-center h-48">
-          <div className="text-muted-foreground">Loading...</div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="p-6">
-        <h1 className="text-3xl font-bold mb-6">Learn about the users.</h1>
-        <Card className="p-6">
-          <div className="text-destructive">Error: {error}</div>
-        </Card>
-      </div>
-    );
-  }
+  const router = useRouter();
 
   return (
-    <div className="p-6">
-      <h1 className="text-lg font-bold mb-6">Learn about the users.</h1>
-      <div className="mb-6">
-        <UserStats />
+    <div className="p-4">
+      <h1 className="text-xl font-semibold mb-6">Overview — Users</h1>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card
+          className="cursor-pointer transition-all hover:shadow-lg hover:scale-105"
+          onClick={() => router.push("/dashboard/overview/users/aggregation")}
+        >
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                className="h-5 w-5"
+              >
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+              Aggregation
+            </CardTitle>
+            <CardDescription className="mt-4">
+              High-level Aggregated User Metrics.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+
+        <Card
+          className="cursor-pointer transition-all hover:shadow-lg hover:scale-105"
+          onClick={() => router.push("/dashboard/overview/users/distribution")}
+        >
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                className="h-5 w-5"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="2" x2="22" y1="12" y2="12" />
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+              </svg>
+              Distribution
+            </CardTitle>
+            <CardDescription className="mt-4">
+              User Demographics & Geolocation Insights
+            </CardDescription>
+          </CardHeader>
+        </Card>
+
+        <Card
+          className="cursor-pointer transition-all hover:shadow-lg hover:scale-105"
+          onClick={() => router.push("/dashboard/overview/users/leaderboard")}
+        >
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                className="h-5 w-5"
+              >
+                <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+                <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+                <path d="M4 22h16" />
+                <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
+                <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
+                <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+              </svg>
+              Leaderboard
+            </CardTitle>
+            <CardDescription className="mt-4">
+              DIscover Power Users
+            </CardDescription>
+          </CardHeader>
+        </Card>
       </div>
-      <div className="mb-6">
-        <ChartOnboardingPie 
-          q1Data={q1Data ?? undefined} 
-          q2Data={q2Data ?? undefined} 
-        />
-      </div>
-      <UserDistributionTable data={data} />
     </div>
   );
 }

@@ -18,7 +18,6 @@ const q1Options = [
   'part-time',
   'self-employed',
   'neet',
-  'other',
 ]
 
 const q2Options = [
