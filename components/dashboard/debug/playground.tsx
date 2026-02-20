@@ -103,7 +103,7 @@ export function Playground() {
     }
 
     return (
-        <div className="flex h-[calc(100vh-12rem)] flex-col gap-4">
+        <div className="flex h-[calc(100vh-3rem)] flex-col gap-4">
             <Card className="flex-1 flex flex-col overflow-hidden">
                 <CardHeader className="border-b">
                     <CardTitle className="flex items-center gap-2">

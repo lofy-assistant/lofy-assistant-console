@@ -40,7 +40,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-export function MessageGraph() {
+export function MessagesGraph() {
   const [analytics, setAnalytics] = useState<MessageAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
   const isMobile = useIsMobile();

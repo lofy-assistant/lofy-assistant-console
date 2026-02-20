@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { MessageAggregation } from "@/app/api/dashboard/messages/aggregation/route";
 
-export function MessageAggregation() {
+export function MessagesAggregation() {
   const [stats, setStats] = useState<MessageAggregation | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
