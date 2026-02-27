@@ -33,8 +33,6 @@ export async function POST(request: Request) {
             data: {
                 subscription_status: "active",
                 current_period_end: new Date("2099-12-31T23:59:59Z"),
-                stripe_customer_id: "",
-                stripe_price_id: ""
             }
         })
 
