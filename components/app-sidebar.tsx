@@ -67,6 +67,10 @@ const navMain = [
         title: "Integrations",
         url: "/dashboard/logs/integrations",
       },
+      {
+        title: "Tokens",
+        url: "/dashboard/logs/token",
+      },
     ],
   },
   {
