@@ -19,6 +19,7 @@ model users {
   created_at                 DateTime                  @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @db.Timestamptz(6)
   updated_at                 DateTime                  @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @updatedAt @db.Timestamptz(6)
   ai_persona                 String?
+  custom_instruction         String?
   email_verification_expires DateTime?                 @db.Timestamptz(6)
   email_verification_token   String?
   email_verified             Boolean                   @default(false)
