@@ -91,6 +91,7 @@ model calendar_events {
 model reminders {
   id              Int               @id @default(autoincrement())
   user_id         String            @db.Uuid
+  target_user_id  String?           @db.Uuid
   message         String
   reminder_time   DateTime          @db.Timestamptz(6)
   status          String
@@ -102,6 +103,7 @@ model reminders {
   user            users             @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@index([user_id])
+  @@index([target_user_id])
   @@index([reminder_time])
   @@index([status])
   @@index([next_recurrence])
