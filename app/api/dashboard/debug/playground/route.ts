@@ -1,24 +1,54 @@
 /**
  * AI Playground API Route
- * 
- * This endpoint forwards chat messages to the FastAPI backend for AI processing.
- * 
+ *
+ * This endpoint forwards debug playground messages to the staging FastAPI backend.
+ *
  * Configuration:
- * - Set FASTAPI_URL environment variable to your FastAPI backend URL
- * - Default: http://localhost:8000
+ * - Set PLAYGROUND_FASTAPI_URL to the staging backend URL
  * - FastAPI endpoint: POST /standalone/chat
- * - Request body: { user_id: string, message: string }
- * - Response: { message: string, cta_url?: string, cta_text?: string, buttons?: unknown[] }
  */
 
 import { NextRequest, NextResponse } from "next/server"
 import { getSessionFromCookie } from "@/lib/session"
+
+interface PlaygroundMessage {
+  role: "user" | "assistant"
+  content: string
+}
+
+interface PlaygroundPayload {
+  mode: "live-user" | "new-user" | "expired-trial" | "seasoned-user"
+  personality?: "atlas" | "brad" | "lexi" | "rocco"
+  seeded_profile_key?: string
+  include_token_usage?: boolean
+  conversation_history?: PlaygroundMessage[]
+}
+
+interface PlaygroundRequestBody {
+  message?: string
+  playground?: PlaygroundPayload
+}
 
 interface ChatResponse {
   message: string
   cta_url?: string
   cta_text?: string
   buttons?: unknown[]
+  usage?: {
+    total_input_tokens: number
+    total_output_tokens: number
+    calls: Array<{
+      call_type: string
+      provider: string
+      model: string
+      input_tokens: number
+      output_tokens: number
+      system_prompt_tokens?: number | null
+      session_context_tokens?: number | null
+      conversation_history_tokens?: number | null
+      tools_schema_tokens?: number | null
+    }>
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -33,8 +63,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse the request body
-    const body = await request.json()
-    const { message } = body
+    const body = (await request.json()) as PlaygroundRequestBody
+    const message = body.message
 
     if (!message || typeof message !== "string" || !message.trim()) {
       return NextResponse.json(
@@ -43,13 +73,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get FastAPI URL from environment variables
-    const fastapiUrl = process.env.FASTAPI_URL
-    
+    const fastapiUrl = process.env.PLAYGROUND_FASTAPI_URL
+
     if (!fastapiUrl) {
-      console.error("FASTAPI_URL is not defined in environment variables")
+      console.error("PLAYGROUND_FASTAPI_URL is not defined in environment variables")
       return NextResponse.json(
-        { error: "FastAPI URL not configured" },
+        { error: "Playground staging backend URL not configured" },
         { status: 500 }
       )
     }
@@ -60,10 +89,12 @@ export async function POST(request: NextRequest) {
     const endpoint = `${base}/standalone/chat`
 
     console.log("Calling FastAPI endpoint:", endpoint)
-    
+
     const requestPayload = {
-      user_id: session.userId,
+      user_id: session.lofyId,
+      user_id_is_canonical: true,
       message: message.trim(),
+      playground: body.playground,
     }
     console.log("Request payload:", requestPayload)
 
@@ -98,6 +129,7 @@ export async function POST(request: NextRequest) {
       cta_url: data.cta_url,
       cta_text: data.cta_text,
       buttons: data.buttons,
+      usage: data.usage,
     })
   } catch (error) {
     console.error("Error in playground API:", error)

@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { UserDistributionData } from "@/app/api/dashboard/users/distribution/route";
 import { UserDistributionTable } from "@/components/dashboard/users/user-distribution-table";
-// import { UserGraph } from "@/components/dashboard/users/graph";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
@@ -13,8 +12,6 @@ export default function Page() {
   const [data, setData] = useState<UserDistributionData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // const [q1Data, setQ1Data] = useState<{ name: string; value: number }[] | null>(null);
-  // const [q2Data, setQ2Data] = useState<{ name: string; value: number }[] | null>(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -30,20 +27,6 @@ export default function Page() {
 
         if (result.success) {
           setData(result.data);
-          
-          // Fetch chart-aggregated data
-          // try {
-          //   const res = await fetch('/api/dashboard/users/aggregation');
-          //   if (res.ok) {
-          //     const json = await res.json()
-          //     if (json.success) {
-          //       setQ1Data(json.q1 ?? null)
-          //       setQ2Data(json.q2 ?? null)
-          //     }
-          //   }
-          // } catch {
-          //   // Ignore chart fetch errors; chart will fallback to sample data
-          // }
         } else {
           throw new Error(result.error || "Unknown error");
         }
@@ -148,14 +131,7 @@ export default function Page() {
         </Button>
         <h1 className="text-lg font-bold">User Distribution</h1>
       </div>
-      
-      {/* <div className="mb-6">
-        <UserGraph
-          q1Data={q1Data ?? undefined} 
-          q2Data={q2Data ?? undefined} 
-        />
-      </div> */}
-      
+
       <UserDistributionTable data={data} />
     </div>
   );

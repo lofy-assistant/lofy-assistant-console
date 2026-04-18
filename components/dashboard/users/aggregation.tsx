@@ -16,9 +16,6 @@ interface UserStatsData {
   completionPercentage: number;
   inactiveUsers: number;
   newUsers: number;
-  avgTimeToFirstActionSeconds: number;
-  usersWithFirstAction: number;
-  usersWithoutFirstAction: number;
 }
 
 export function UserAggregation() {
@@ -53,18 +50,6 @@ export function UserAggregation() {
 
     fetchStats();
   }, [inactiveDays]);
-
-  function formatDuration(seconds: number) {
-    if (!seconds || seconds <= 0) return '0s';
-    const days = Math.floor(seconds / 86400);
-    const hours = Math.floor((seconds % 86400) / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    if (days > 0) return `${days}d ${hours}h`;
-    if (hours > 0) return `${hours}h ${minutes}m`;
-    if (minutes > 0) return `${minutes}m ${secs}s`;
-    return `${secs}s`;
-  }
 
   if (loading) {
     return (
@@ -305,33 +290,6 @@ export function UserAggregation() {
                 <SelectItem value="30">30 days</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Time to First Action</CardTitle>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            className="h-4 w-4 text-muted-foreground"
-          >
-            <path d="M12 8v4l3 3" />
-            <circle cx="12" cy="12" r="10" />
-          </svg>
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{formatDuration(stats.avgTimeToFirstActionSeconds)}</div>
-          <div className="flex items-center justify-between mt-2">
-            <div className="text-xs text-muted-foreground">
-              <div>Users with action: <span className="font-medium">{(stats.usersWithFirstAction ?? 0).toLocaleString()}</span></div>
-              <div>Users without action: <span className="font-medium">{(stats.usersWithoutFirstAction ?? 0).toLocaleString()}</span></div>
-            </div>
           </div>
         </CardContent>
       </Card>

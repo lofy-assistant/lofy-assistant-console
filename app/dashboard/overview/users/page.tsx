@@ -17,7 +17,7 @@ export default function Page() {
       <h1 className="text-xl font-semibold mb-6">Overview — Users</h1>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card
-          className="cursor-pointer transition-all hover:shadow-lg hover:scale-105"
+          className="cursor-pointer transition-all hover:ring-2 hover:ring-green-400/70"
           onClick={() => router.push("/dashboard/overview/users/aggregation")}
         >
           <CardHeader>
@@ -45,7 +45,7 @@ export default function Page() {
         </Card>
 
         <Card
-          className="cursor-pointer transition-all hover:shadow-lg hover:scale-105"
+          className="cursor-pointer transition-all hover:ring-2 hover:ring-green-400/70"
           onClick={() => router.push("/dashboard/overview/users/distribution")}
         >
           <CardHeader>
@@ -73,7 +73,7 @@ export default function Page() {
         </Card>
 
         <Card
-          className="cursor-pointer transition-all hover:shadow-lg hover:scale-105"
+            className="cursor-pointer transition-all hover:ring-2 hover:ring-green-400/70"
           onClick={() => router.push("/dashboard/overview/users/leaderboard")}
         >
           <CardHeader>
