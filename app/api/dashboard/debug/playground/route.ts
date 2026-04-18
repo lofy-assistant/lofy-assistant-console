@@ -51,6 +51,15 @@ interface ChatResponse {
   }
 }
 
+function getBackendLabel(url: string) {
+  try {
+    const parsed = new URL(url)
+    return parsed.host
+  } catch {
+    return "Invalid backend URL"
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Get the current user session
@@ -130,6 +139,7 @@ export async function POST(request: NextRequest) {
       cta_text: data.cta_text,
       buttons: data.buttons,
       usage: data.usage,
+      backend_label: getBackendLabel(base),
     })
   } catch (error) {
     console.error("Error in playground API:", error)

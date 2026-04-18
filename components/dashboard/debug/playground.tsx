@@ -31,6 +31,18 @@ interface UsageSummary {
     calls: UsageCall[]
 }
 
+interface PlaygroundResponse {
+    response?: string
+    cta_url?: string
+    cta_text?: string
+    buttons?: unknown[]
+    usage?: UsageSummary
+    backend_label?: string
+    error?: string
+    details?: string
+    endpoint?: string
+}
+
 interface MessageContext {
     mode: PlaygroundMode
     personality: PersonalityKey
@@ -139,6 +151,7 @@ export function Playground() {
     const [mode, setMode] = useState<PlaygroundMode>("live-user")
     const [personality, setPersonality] = useState<PersonalityKey>("atlas")
     const [seededProfileKey, setSeededProfileKey] = useState<SeededProfileKey>("ops-founder")
+    const [backendLabel, setBackendLabel] = useState<string>("staging backend")
     const messagesEndRef = useRef<HTMLDivElement>(null)
 
     const scrollToBottom = () => {
@@ -192,12 +205,16 @@ export function Playground() {
                 }),
             })
 
-            const data = await response.json()
+            const data = (await response.json()) as PlaygroundResponse
 
             if (!response.ok) {
                 const errorDetails = data.details ? `\n${data.details}` : ""
                 const endpoint = data.endpoint ? `\nEndpoint: ${data.endpoint}` : ""
                 throw new Error(`${data.error || "Failed to get response"}${errorDetails}${endpoint}`)
+            }
+
+            if (data.backend_label) {
+                setBackendLabel(data.backend_label)
             }
 
             const assistantMessage: Message = {
@@ -247,205 +264,219 @@ export function Playground() {
     )
 
     return (
-        <div className="flex h-[calc(100vh-3rem)] flex-col gap-4">
-            <Card>
-                <CardHeader className="border-b">
-                    <CardTitle className="flex items-center gap-2">
-                        <Bot className="size-5 text-primary" />
-                        AI Playground
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="grid gap-4 p-4 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_auto]">
-                    <div className="space-y-2">
-                        <p className="text-sm font-medium">Mode</p>
-                        <Select value={mode} onValueChange={(value) => setMode(value as PlaygroundMode)}>
-                            <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Select a mode" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {MODE_OPTIONS.map((option) => (
-                                    <SelectItem key={option.value} value={option.value}>
-                                        {option.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <p className="text-xs text-muted-foreground">{currentMode.description}</p>
-                    </div>
-
-                    <div className="space-y-2">
-                        <p className="text-sm font-medium">Personality</p>
-                        <Select
-                            value={personality}
-                            onValueChange={(value) => setPersonality(value as PersonalityKey)}
-                        >
-                            <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Select personality" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {PERSONALITY_OPTIONS.map((option) => (
-                                    <SelectItem key={option.value} value={option.value}>
-                                        {option.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <p className="text-xs text-muted-foreground">
-                            Every request from this page is forced through the selected response personality.
-                        </p>
-                    </div>
-
-                    <div className="flex items-start justify-end">
-                        <Button
-                            variant="outline"
-                            onClick={() => setMessages([])}
-                            disabled={messages.length === 0 || isLoading}
-                        >
-                            Clear transcript
-                        </Button>
-                    </div>
-
-                    {mode === "seasoned-user" && (
-                        <div className="space-y-2 md:col-span-2">
-                            <p className="text-sm font-medium">Seeded profile</p>
-                            <Select
-                                value={seededProfileKey}
-                                onValueChange={(value) => setSeededProfileKey(value as SeededProfileKey)}
-                            >
-                                <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Select staged profile" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {SEEDED_PROFILE_OPTIONS.map((option) => (
-                                        <SelectItem key={option.value} value={option.value}>
-                                            {option.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <p className="text-xs text-muted-foreground">
-                                {currentSeededProfile?.description}
-                            </p>
-                        </div>
-                    )}
-
-                    <div className="rounded-lg border bg-muted/40 px-3 py-2 text-xs text-muted-foreground md:col-span-3">
-                        Playground requests are routed to the staging AI backend and include the current in-browser
-                        transcript, so mode changes stay scoped to this page instead of normal chat history.
-                    </div>
-                </CardContent>
-            </Card>
-
-            <Card className="flex flex-1 flex-col overflow-hidden">
-                <CardContent className="flex-1 overflow-y-auto p-4">
-                    {messages.length === 0 ? (
-                        <div className="flex h-full items-center justify-center">
-                            <div className="text-center text-muted-foreground">
-                                <Bot className="mx-auto mb-4 size-12 opacity-50" />
-                                <p className="text-lg font-medium">Start a conversation</p>
-                                <p className="text-sm">Test staging AI flows, personas, and token usage from one place.</p>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="space-y-4">
-                            {messages.map((message) => {
-                                const modeMeta = getModeMeta(message.context.mode)
-                                const profileMeta = getSeededProfileMeta(message.context.seededProfileKey)
-                                return (
-                                    <div
-                                        key={message.id}
-                                        className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
-                                    >
-                                        {message.role === "assistant" && (
+        <div className="flex h-[calc(100vh-3rem)] min-h-0 flex-col gap-4">
+            <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
+                {/* Left ~60%: chat + composer */}
+                <div className="flex min-h-0 min-w-0 flex-[3] flex-col gap-4">
+                    <Card className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                        <CardHeader className="shrink-0 border-b">
+                            <CardTitle className="flex items-center gap-2">
+                                <Bot className="size-5 text-primary" />
+                                AI Playground
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="min-h-0 flex-1 overflow-y-auto p-4">
+                            {messages.length === 0 ? (
+                                <div className="flex h-full min-h-[12rem] items-center justify-center">
+                                    <div className="text-center text-muted-foreground">
+                                        <Bot className="mx-auto mb-4 size-12 opacity-50" />
+                                        <p className="text-lg font-medium">Start a conversation</p>
+                                        <p className="text-sm">
+                                            Test staging AI flows, personas, and token usage from one place.
+                                        </p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {messages.map((message) => {
+                                        const modeMeta = getModeMeta(message.context.mode)
+                                        const profileMeta = getSeededProfileMeta(message.context.seededProfileKey)
+                                        return (
+                                            <div
+                                                key={message.id}
+                                                className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                                            >
+                                                {message.role === "assistant" && (
+                                                    <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                                        <Bot className="size-4" />
+                                                    </div>
+                                                )}
+                                                <div className="flex max-w-[78%] flex-col gap-2">
+                                                    <div
+                                                        className={`rounded-lg px-4 py-2 ${message.role === "user"
+                                                            ? "bg-primary text-primary-foreground"
+                                                            : "bg-muted text-foreground"
+                                                            }`}
+                                                    >
+                                                        <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                                                    </div>
+                                                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                                                        <span>{message.timestamp.toLocaleTimeString()}</span>
+                                                        <span>{modeMeta.label}</span>
+                                                        <span>{getPersonalityLabel(message.context.personality)}</span>
+                                                        {profileMeta && <span>{profileMeta.label}</span>}
+                                                    </div>
+                                                    {message.role === "assistant" && message.usage && (
+                                                        <p className="text-[11px] text-muted-foreground">
+                                                            {formatUsage(message.usage)}
+                                                        </p>
+                                                    )}
+                                                    {message.role === "assistant" && message.cta_url && message.cta_text && (
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            asChild
+                                                            className="w-fit"
+                                                        >
+                                                            <a href={message.cta_url} target="_blank" rel="noopener noreferrer">
+                                                                {message.cta_text}
+                                                                <ExternalLink className="ml-2 size-3" />
+                                                            </a>
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                                {message.role === "user" && (
+                                                    <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                                                        <User className="size-4" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )
+                                    })}
+                                    {isLoading && (
+                                        <div className="flex justify-start gap-3">
                                             <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                                                 <Bot className="size-4" />
                                             </div>
-                                        )}
-                                        <div className="flex max-w-[78%] flex-col gap-2">
-                                            <div
-                                                className={`rounded-lg px-4 py-2 ${message.role === "user"
-                                                    ? "bg-primary text-primary-foreground"
-                                                    : "bg-muted text-foreground"
-                                                    }`}
-                                            >
-                                                <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                                            <div className="flex items-center gap-2 rounded-lg bg-muted px-4 py-2">
+                                                <Loader2 className="size-4 animate-spin" />
+                                                <span className="text-sm text-muted-foreground">Thinking...</span>
                                             </div>
-                                            <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
-                                                <span>{message.timestamp.toLocaleTimeString()}</span>
-                                                <span>{modeMeta.label}</span>
-                                                <span>{getPersonalityLabel(message.context.personality)}</span>
-                                                {profileMeta && <span>{profileMeta.label}</span>}
-                                            </div>
-                                            {message.role === "assistant" && message.usage && (
-                                                <p className="text-[11px] text-muted-foreground">
-                                                    {formatUsage(message.usage)}
-                                                </p>
-                                            )}
-                                            {message.role === "assistant" && message.cta_url && message.cta_text && (
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    asChild
-                                                    className="w-fit"
-                                                >
-                                                    <a href={message.cta_url} target="_blank" rel="noopener noreferrer">
-                                                        {message.cta_text}
-                                                        <ExternalLink className="ml-2 size-3" />
-                                                    </a>
-                                                </Button>
-                                            )}
                                         </div>
-                                        {message.role === "user" && (
-                                            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                                                <User className="size-4" />
-                                            </div>
-                                        )}
-                                    </div>
-                                )
-                            })}
-                            {isLoading && (
-                                <div className="flex justify-start gap-3">
-                                    <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                                        <Bot className="size-4" />
-                                    </div>
-                                    <div className="flex items-center gap-2 rounded-lg bg-muted px-4 py-2">
-                                        <Loader2 className="size-4 animate-spin" />
-                                        <span className="text-sm text-muted-foreground">Thinking...</span>
-                                    </div>
+                                    )}
+                                    <div ref={messagesEndRef} />
                                 </div>
                             )}
-                            <div ref={messagesEndRef} />
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
+                        </CardContent>
+                    </Card>
 
-            <Card>
-                <CardContent className="p-4">
-                    <div className="flex gap-2">
-                        <Input
-                            value={input}
-                            onChange={(e) => setInput(e.target.value)}
-                            onKeyDown={handleKeyPress}
-                            placeholder="Type your message..."
-                            disabled={isLoading}
-                            className="flex-1"
-                        />
-                        <Button
-                            onClick={handleSend}
-                            disabled={!input.trim() || isLoading}
-                            size="icon"
-                            className="shrink-0"
-                        >
-                            {isLoading ? (
-                                <Loader2 className="size-4 animate-spin" />
-                            ) : (
-                                <Send className="size-4" />
+                    <Card className="shrink-0">
+                        <CardContent className="p-4">
+                            <div className="flex gap-2">
+                                <Input
+                                    value={input}
+                                    onChange={(e) => setInput(e.target.value)}
+                                    onKeyDown={handleKeyPress}
+                                    placeholder="Type your message..."
+                                    disabled={isLoading}
+                                    className="flex-1"
+                                />
+                                <Button
+                                    onClick={handleSend}
+                                    disabled={!input.trim() || isLoading}
+                                    size="icon"
+                                    className="shrink-0"
+                                >
+                                    {isLoading ? (
+                                        <Loader2 className="size-4 animate-spin" />
+                                    ) : (
+                                        <Send className="size-4" />
+                                    )}
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Right ~40%: session settings */}
+                <div className="flex min-h-0 min-w-0 flex-[2] flex-col">
+                    <Card className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                        <CardHeader className="shrink-0 border-b">
+                            <CardTitle className="text-base">Session settings</CardTitle>
+                        </CardHeader>
+                        <CardContent className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
+                            <div className="space-y-2">
+                                <p className="text-sm font-medium">Mode</p>
+                                <Select value={mode} onValueChange={(value) => setMode(value as PlaygroundMode)}>
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Select a mode" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {MODE_OPTIONS.map((option) => (
+                                            <SelectItem key={option.value} value={option.value}>
+                                                {option.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <p className="text-xs text-muted-foreground">{currentMode.description}</p>
+                            </div>
+
+                            <div className="space-y-2">
+                                <p className="text-sm font-medium">Personality</p>
+                                <Select
+                                    value={personality}
+                                    onValueChange={(value) => setPersonality(value as PersonalityKey)}
+                                >
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Select personality" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {PERSONALITY_OPTIONS.map((option) => (
+                                            <SelectItem key={option.value} value={option.value}>
+                                                {option.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <p className="text-xs text-muted-foreground">
+                                    Every request from this page is forced through the selected response personality.
+                                </p>
+                            </div>
+
+                            {mode === "seasoned-user" && (
+                                <div className="space-y-2">
+                                    <p className="text-sm font-medium">Seeded profile</p>
+                                    <Select
+                                        value={seededProfileKey}
+                                        onValueChange={(value) => setSeededProfileKey(value as SeededProfileKey)}
+                                    >
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder="Select staged profile" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {SEEDED_PROFILE_OPTIONS.map((option) => (
+                                                <SelectItem key={option.value} value={option.value}>
+                                                    {option.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <p className="text-xs text-muted-foreground">
+                                        {currentSeededProfile?.description}
+                                    </p>
+                                </div>
                             )}
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
+
+                            <Button
+                                variant="outline"
+                                className="w-full"
+                                onClick={() => setMessages([])}
+                                disabled={messages.length === 0 || isLoading}
+                            >
+                                Clear transcript
+                            </Button>
+
+                            <div className="rounded-lg border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                                Playground requests are routed to the staging AI backend and include the current
+                                in-browser transcript, so mode changes stay scoped to this page instead of normal chat
+                                history. Current backend:{" "}
+                                <span className="font-medium text-foreground">{backendLabel}</span>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
         </div>
     )
 }
