@@ -4,7 +4,8 @@
  * This endpoint forwards debug playground messages to the staging FastAPI backend.
  *
  * Configuration:
- * - Set PLAYGROUND_FASTAPI_URL to the staging backend URL
+ * - Set FASTAPI_URL to the staging backend URL
+ * - PLAYGROUND_FASTAPI_URL remains supported as a fallback for older deployments
  * - FastAPI endpoint: POST /standalone/chat
  */
 
@@ -82,10 +83,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const fastapiUrl = process.env.PLAYGROUND_FASTAPI_URL
+    const fastapiUrl =
+      process.env.FASTAPI_URL || process.env.PLAYGROUND_FASTAPI_URL
 
     if (!fastapiUrl) {
-      console.error("PLAYGROUND_FASTAPI_URL is not defined in environment variables")
+      console.error(
+        "FASTAPI_URL and PLAYGROUND_FASTAPI_URL are not defined in environment variables"
+      )
       return NextResponse.json(
         { error: "Playground staging backend URL not configured" },
         { status: 500 }
