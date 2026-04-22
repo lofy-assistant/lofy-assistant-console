@@ -1,32 +1,17 @@
 /**
- * AI Playground API Route
+ * AI Playground — forwards chat to staging FastAPI only.
+ * Does not query console DB; core resolves the user against its own staging data.
  *
- * This endpoint forwards debug playground messages to the staging FastAPI backend.
- *
- * Configuration:
- * - Set FASTAPI_URL to the staging backend URL
- * - FastAPI endpoint: POST /standalone/chat
+ * Env: FASTAPI_URL (staging core base URL, no path) — optional fallbacks: PLAYGROUND_FASTAPI_URL, PLAYGROUND_CORE_BASE_URL
  */
 
 import { NextRequest, NextResponse } from "next/server"
 import { getSessionFromCookie } from "@/lib/session"
-
-interface PlaygroundMessage {
-  role: "user" | "assistant"
-  content: string
-}
-
-interface PlaygroundPayload {
-  mode: "live-user" | "new-user" | "expired-trial" | "seasoned-user"
-  personality?: "atlas" | "brad" | "lexi" | "rocco"
-  seeded_profile_key?: string
-  include_token_usage?: boolean
-  conversation_history?: PlaygroundMessage[]
-}
+import { getPlaygroundCoreBaseUrl, isValidUuid } from "@/lib/playground-core"
 
 interface PlaygroundRequestBody {
   message?: string
-  playground?: PlaygroundPayload
+  user_id?: string
 }
 
 interface ChatResponse {
@@ -62,52 +47,42 @@ function getBackendLabel(url: string) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Get the current user session
-    const session = await getSessionFromCookie()
-    if (!session) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      )
+    if (!(await getSessionFromCookie())) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Parse the request body
     const body = (await request.json()) as PlaygroundRequestBody
     const message = body.message
+    const userId = body.user_id?.trim()
 
     if (!message || typeof message !== "string" || !message.trim()) {
+      return NextResponse.json({ error: "Message is required" }, { status: 400 })
+    }
+
+    if (!userId) {
+      return NextResponse.json({ error: "A user ID (canonical UUID) is required" }, { status: 400 })
+    }
+
+    if (!isValidUuid(userId)) {
+      return NextResponse.json({ error: "user_id must be a valid UUID" }, { status: 400 })
+    }
+
+    const base = getPlaygroundCoreBaseUrl()
+    if (!base) {
       return NextResponse.json(
-        { error: "Message is required" },
-        { status: 400 }
+        { error: "Playground core URL not configured (set FASTAPI_URL to your staging FastAPI base URL)" },
+        { status: 503 }
       )
     }
 
-    const fastapiUrl = process.env.FASTAPI_URL
-
-    if (!fastapiUrl) {
-      console.error("FASTAPI_URL is not defined in environment variables")
-      return NextResponse.json(
-        { error: "Playground staging backend URL not configured" },
-        { status: 500 }
-      )
-    }
-
-    // Ensure we don't have double slashes if fastapiUrl ends with a slash
-    const base = fastapiUrl.endsWith("/") ? fastapiUrl.slice(0, -1) : fastapiUrl
-    // The standalone router has a prefix of "/standalone"
     const endpoint = `${base}/standalone/chat`
 
-    console.log("Calling FastAPI endpoint:", endpoint)
-
     const requestPayload = {
-      user_id: session.lofyId,
+      user_id: userId,
       user_id_is_canonical: true,
       message: message.trim(),
-      playground: body.playground,
     }
-    console.log("Request payload:", requestPayload)
 
-    // Call the FastAPI backend with the correct format
     const response = await fetch(endpoint, {
       method: "POST",
       headers: {
@@ -118,13 +93,22 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error("FastAPI error:", response.status, response.statusText, errorText)
-      console.error("Attempted endpoint:", endpoint)
+      let detail = `${response.status} ${response.statusText}`
+      try {
+        const errJson = JSON.parse(errorText) as { detail?: unknown }
+        if (typeof errJson.detail === "string") {
+          detail = errJson.detail
+        }
+      } catch {
+        if (errorText) {
+          detail = errorText.slice(0, 500)
+        }
+      }
       return NextResponse.json(
-        { 
+        {
           error: "Failed to get response from AI",
-          details: `${response.status} ${response.statusText}`,
-          endpoint: endpoint
+          details: detail,
+          endpoint,
         },
         { status: response.status }
       )
@@ -132,7 +116,6 @@ export async function POST(request: NextRequest) {
 
     const data: ChatResponse = await response.json()
 
-    // Return the response with all fields from FastAPI
     return NextResponse.json({
       response: data.message,
       cta_url: data.cta_url,
@@ -143,9 +126,6 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error("Error in playground API:", error)
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
