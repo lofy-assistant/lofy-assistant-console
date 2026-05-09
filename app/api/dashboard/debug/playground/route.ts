@@ -8,11 +8,17 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import { getSessionFromCookie } from "@/lib/session"
-import { getPlaygroundCoreBaseUrl, isValidUuid } from "@/lib/playground-core"
+import { getFetchFailureDetails, getPlaygroundCoreBaseUrl, isValidUuid } from "@/lib/playground-core"
 
 interface PlaygroundRequestBody {
   message?: string
   user_id?: string
+  media?: {
+    type?: "image" | "audio"
+    mime_type?: string
+    data_base64?: string
+    filename?: string
+  }
 }
 
 interface ChatResponse {
@@ -46,28 +52,6 @@ function getBackendLabel(url: string) {
   }
 }
 
-function getFetchFailureDetails(error: unknown) {
-  if (!(error instanceof TypeError) || error.message !== "fetch failed") {
-    return null
-  }
-
-  const cause = (error as TypeError & { cause?: unknown }).cause
-  const code =
-    cause && typeof cause === "object" && "code" in cause
-      ? String((cause as { code?: unknown }).code)
-      : null
-
-  if (code === "ECONNREFUSED") {
-    return "Core API is not accepting connections. Start lofy-assistant-core or update CORE_API_URL."
-  }
-
-  if (code === "ECONNRESET") {
-    return "Core API closed the connection before responding. Check the core server logs for the failed request."
-  }
-
-  return "Core API request failed before a response was received."
-}
-
 export async function POST(request: NextRequest) {
   let endpoint: string | null = null
 
@@ -79,9 +63,10 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as PlaygroundRequestBody
     const message = body.message
     const userId = body.user_id?.trim()
+    const media = body.media
 
-    if (!message || typeof message !== "string" || !message.trim()) {
-      return NextResponse.json({ error: "Message is required" }, { status: 400 })
+    if ((!message || typeof message !== "string" || !message.trim()) && !media) {
+      return NextResponse.json({ error: "Message or media is required" }, { status: 400 })
     }
 
     if (!userId) {
@@ -91,6 +76,26 @@ export async function POST(request: NextRequest) {
     if (!isValidUuid(userId)) {
       return NextResponse.json({ error: "user_id must be a valid UUID" }, { status: 400 })
     }
+
+    if (media) {
+      if (
+        (media.type !== "image" && media.type !== "audio") ||
+        typeof media.mime_type !== "string" ||
+        typeof media.data_base64 !== "string" ||
+        !media.mime_type.trim() ||
+        !media.data_base64.trim()
+      ) {
+        return NextResponse.json({ error: "Valid media type, MIME type, and base64 data are required" }, { status: 400 })
+      }
+    }
+    const normalizedMedia = media
+      ? {
+          type: media.type as "image" | "audio",
+          mime_type: media.mime_type as string,
+          data_base64: media.data_base64 as string,
+          filename: media.filename,
+        }
+      : null
 
     const base = getPlaygroundCoreBaseUrl()
     if (!base) {
@@ -105,7 +110,17 @@ export async function POST(request: NextRequest) {
     const requestPayload = {
       user_id: userId,
       user_id_is_canonical: true,
-      message: message.trim(),
+      message: message?.trim() || "",
+      ...(normalizedMedia
+        ? {
+            media: {
+              type: normalizedMedia.type,
+              mime_type: normalizedMedia.mime_type.trim(),
+              data_base64: normalizedMedia.data_base64.trim(),
+              filename: normalizedMedia.filename,
+            },
+          }
+        : {}),
     }
 
     const response = await fetch(endpoint, {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSessionFromCookie } from "@/lib/session"
-import { getPlaygroundCoreBaseUrl, isValidUuid } from "@/lib/playground-core"
+import { getFetchFailureDetails, getPlaygroundCoreBaseUrl, isValidUuid } from "@/lib/playground-core"
 
 export async function GET(request: NextRequest) {
   try {
@@ -72,6 +72,18 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(payload)
   } catch (error) {
     console.error("Error loading playground context:", error)
+    const fetchFailureDetails = getFetchFailureDetails(error)
+
+    if (fetchFailureDetails) {
+      return NextResponse.json(
+        {
+          error: "Core API unavailable",
+          details: fetchFailureDetails,
+        },
+        { status: 503 }
+      )
+    }
+
     return NextResponse.json(
       {
         error: "Failed to load user context",

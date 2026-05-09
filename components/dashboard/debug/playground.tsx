@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Bot, Loader2, RefreshCw, Send, User } from "lucide-react"
+import { Bot, ImageIcon, Loader2, Mic, RefreshCw, Send, Square, User, X } from "lucide-react"
 
 interface PlaygroundResponse {
   response?: string
@@ -66,6 +66,14 @@ interface Message {
   context: ActiveAccountContext
 }
 
+interface DraftMedia {
+  type: "image" | "audio"
+  mime_type: string
+  data_base64: string
+  filename: string
+  size: number
+}
+
 function formatDateTime(value?: string | Date | null) {
   if (!value) {
     return "Not available"
@@ -88,9 +96,22 @@ function truncateText(value: string, maxLength = 120) {
   return `${trimmed.slice(0, maxLength - 3)}...`
 }
 
+function formatBytes(value: number) {
+  if (!Number.isFinite(value) || value <= 0) return "0 B"
+  const units = ["B", "KB", "MB"]
+  let size = value
+  let unitIndex = 0
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024
+    unitIndex += 1
+  }
+  return `${size.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`
+}
+
 export function Playground() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
+  const [draftMedia, setDraftMedia] = useState<DraftMedia | null>(null)
   const [draftUserId, setDraftUserId] = useState("")
   const [activeUserId, setActiveUserId] = useState<string | null>(null)
   const [contextData, setContextData] = useState<PlaygroundContextResponse["data"] | null>(null)
@@ -100,7 +121,13 @@ export function Playground() {
   const [backendLabel, setBackendLabel] = useState<string>("playground core")
   const [actors, setActors] = useState<ActorsResponse["actors"]>([])
   const [actorsWarning, setActorsWarning] = useState<string | null>(null)
+  const [isRecording, setIsRecording] = useState(false)
+  const [mediaError, setMediaError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
+  const audioInputRef = useRef<HTMLInputElement>(null)
+  const recorderRef = useRef<MediaRecorder | null>(null)
+  const recordingChunksRef = useRef<Blob[]>([])
 
   useEffect(() => {
     let cancelled = false
@@ -139,6 +166,12 @@ export function Playground() {
     "test account"
 
   const presetSelectValue = actors.some((a) => a.id === draftUserId) ? draftUserId : undefined
+
+  const canSend = Boolean((input.trim() || draftMedia) && !isLoading && activeUserId)
+
+  const mediaSummary = draftMedia
+    ? `${draftMedia.type === "image" ? "Image" : "Voice"} · ${draftMedia.filename} · ${formatBytes(draftMedia.size)}`
+    : null
 
   const loadUserContext = async (
     requestedUserId = draftUserId,
@@ -187,18 +220,86 @@ export function Playground() {
     }
   }
 
+  const readMediaFile = async (file: File, type: DraftMedia["type"]) => {
+    setMediaError(null)
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(String(reader.result || ""))
+      reader.onerror = () => reject(new Error("Could not read media file"))
+      reader.readAsDataURL(file)
+    })
+    const [, data_base64 = ""] = dataUrl.split(",", 2)
+    if (!data_base64) {
+      setMediaError("Could not prepare that file for upload.")
+      return
+    }
+    setDraftMedia({
+      type,
+      mime_type: file.type || (type === "image" ? "image/jpeg" : "audio/webm"),
+      data_base64,
+      filename: file.name || (type === "image" ? "image-upload" : "voice-note"),
+      size: file.size,
+    })
+  }
+
+  const handleMediaPick = (file: File | undefined, type: DraftMedia["type"]) => {
+    if (!file) return
+    void readMediaFile(file, type).catch((error) => {
+      setMediaError(error instanceof Error ? error.message : "Could not read media file.")
+    })
+  }
+
+  const startRecording = async () => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setMediaError("Voice recording is not available in this browser.")
+      return
+    }
+
+    try {
+      setMediaError(null)
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const recorder = new MediaRecorder(stream)
+      recordingChunksRef.current = []
+      recorderRef.current = recorder
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) recordingChunksRef.current.push(event.data)
+      }
+      recorder.onstop = () => {
+        const mimeType = recorder.mimeType || "audio/webm"
+        const blob = new Blob(recordingChunksRef.current, { type: mimeType })
+        stream.getTracks().forEach((track) => track.stop())
+        void readMediaFile(new File([blob], `voice-note-${Date.now()}.webm`, { type: mimeType }), "audio")
+        setIsRecording(false)
+      }
+      recorder.start()
+      setIsRecording(true)
+    } catch (error) {
+      setMediaError(error instanceof Error ? error.message : "Could not start voice recording.")
+      setIsRecording(false)
+    }
+  }
+
+  const stopRecording = () => {
+    recorderRef.current?.stop()
+  }
+
   const handleSend = async () => {
-    if (!input.trim() || isLoading || !activeUserId) return
+    if (!canSend || !activeUserId) return
 
     const context: ActiveAccountContext = {
       userId: activeUserId,
       accountLabel: selectedAccountLabel,
     }
 
+    const content = [
+      input.trim(),
+      mediaSummary ? `[Attached ${mediaSummary}]` : null,
+    ].filter(Boolean).join("\n\n")
+
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
-      content: input.trim(),
+      content,
       timestamp: new Date(),
       context,
     }
@@ -206,6 +307,8 @@ export function Playground() {
     const nextMessages = [...messages, userMessage]
     setMessages(nextMessages)
     setInput("")
+    const mediaToSend = draftMedia
+    setDraftMedia(null)
     setIsLoading(true)
 
     try {
@@ -216,7 +319,17 @@ export function Playground() {
         },
         body: JSON.stringify({
           user_id: activeUserId,
-          message: userMessage.content,
+          message: input.trim(),
+          ...(mediaToSend
+            ? {
+                media: {
+                  type: mediaToSend.type,
+                  mime_type: mediaToSend.mime_type,
+                  data_base64: mediaToSend.data_base64,
+                  filename: mediaToSend.filename,
+                },
+              }
+            : {}),
         }),
       })
 
@@ -368,18 +481,87 @@ export function Playground() {
 
           <Card className="shrink-0">
             <CardContent className="p-4">
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(event) => {
+                  handleMediaPick(event.target.files?.[0], "image")
+                  event.target.value = ""
+                }}
+              />
+              <input
+                ref={audioInputRef}
+                type="file"
+                accept="audio/*"
+                className="hidden"
+                onChange={(event) => {
+                  handleMediaPick(event.target.files?.[0], "audio")
+                  event.target.value = ""
+                }}
+              />
+              {draftMedia && (
+                <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2 text-sm">
+                  <div className="flex min-w-0 items-center gap-2">
+                    {draftMedia.type === "image" ? <ImageIcon className="size-4" /> : <Mic className="size-4" />}
+                    <span className="truncate">{mediaSummary}</span>
+                  </div>
+                  <Button variant="ghost" size="icon" className="size-7 shrink-0" onClick={() => setDraftMedia(null)}>
+                    <X className="size-4" />
+                  </Button>
+                </div>
+              )}
+              {mediaError && (
+                <div className="mb-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+                  {mediaError}
+                </div>
+              )}
               <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => imageInputRef.current?.click()}
+                  disabled={isLoading || !activeUserId}
+                  className="shrink-0"
+                  title="Attach image"
+                >
+                  <ImageIcon className="size-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => audioInputRef.current?.click()}
+                  disabled={isLoading || !activeUserId}
+                  className="shrink-0"
+                  title="Attach audio"
+                >
+                  <Mic className="size-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant={isRecording ? "destructive" : "outline"}
+                  size="icon"
+                  onClick={isRecording ? stopRecording : startRecording}
+                  disabled={isLoading || !activeUserId}
+                  className="shrink-0"
+                  title={isRecording ? "Stop recording" : "Record voice note"}
+                >
+                  {isRecording ? <Square className="size-4" /> : <Mic className="size-4" />}
+                </Button>
                 <Input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyPress}
-                  placeholder="Type your message..."
+                  placeholder={draftMedia ? "Add an optional caption..." : "Type your message..."}
                   disabled={isLoading || !activeUserId}
                   className="flex-1"
                 />
                 <Button
                   onClick={handleSend}
-                  disabled={!input.trim() || isLoading || !activeUserId}
+                  disabled={!canSend}
                   size="icon"
                   className="shrink-0"
                 >
