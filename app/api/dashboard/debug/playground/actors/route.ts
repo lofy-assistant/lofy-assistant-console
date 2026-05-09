@@ -1,44 +1,48 @@
 import { NextResponse } from "next/server"
 import { getSessionFromCookie } from "@/lib/session"
+import { getStagingPrisma } from "@/lib/staging-database"
 
 export type PlaygroundActor = {
   id: string
   label: string
+  name: string | null
+  email: string | null
 }
 
 export async function GET() {
-  if (!(await getSessionFromCookie())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
-  const raw = process.env.PLAYGROUND_ACTORS?.trim()
-  if (!raw) {
-    return NextResponse.json({ actors: [] as PlaygroundActor[] })
-  }
-
   try {
-    const parsed = JSON.parse(raw) as unknown
-    if (!Array.isArray(parsed)) {
-      return NextResponse.json({
-        actors: [] as PlaygroundActor[],
-        warning: "PLAYGROUND_ACTORS must be a JSON array of { id, label } objects",
-      })
+    if (!(await getSessionFromCookie())) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const actors: PlaygroundActor[] = parsed
-      .filter((entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === "object")
-      .map((entry) => ({
-        id: typeof entry.id === "string" ? entry.id.trim() : "",
-        label: typeof entry.label === "string" ? entry.label.trim() : "Unnamed actor",
-      }))
-      .filter((entry) => entry.id.length > 0)
-      .slice(0, 8)
+    const prisma = getStagingPrisma()
+    const users = await prisma.users.findMany({
+      orderBy: [{ created_at: "desc" }],
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      },
+    })
+
+    const actors: PlaygroundActor[] = users.map((user) => {
+      const name = user.name?.trim() || null
+      const email = user.email?.trim() || null
+
+      return {
+        id: user.id,
+        name,
+        email,
+        label: name || email || `Unnamed user (${user.id.slice(0, 8)})`,
+      }
+    })
 
     return NextResponse.json({ actors })
-  } catch {
+  } catch (error) {
+    console.error("Error loading staging playground users:", error)
     return NextResponse.json({
       actors: [] as PlaygroundActor[],
-      warning: "Invalid PLAYGROUND_ACTORS JSON",
+      warning: error instanceof Error ? error.message : "Failed to load staging users",
     })
   }
 }

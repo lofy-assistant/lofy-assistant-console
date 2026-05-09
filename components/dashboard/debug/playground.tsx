@@ -12,8 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { Bot, ChevronDown, Loader2, RefreshCw, Send, User } from "lucide-react"
+import { Bot, Loader2, RefreshCw, Send, User } from "lucide-react"
 
 interface PlaygroundResponse {
   response?: string
@@ -34,10 +33,7 @@ interface PlaygroundContextResponse {
       updatedAt: string
       subscriptionStatus: string | null
       subscriptionPeriodEnd: string | null
-      mongoProfile: {
-        exists: boolean
-        timezone: string | null
-      }
+      timezone: string | null
       messageCount: number
       latestMessageAt: string | null
     }
@@ -53,7 +49,7 @@ interface PlaygroundContextResponse {
 }
 
 interface ActorsResponse {
-  actors: Array<{ id: string; label: string }>
+  actors: Array<{ id: string; label: string; name: string | null; email: string | null }>
   warning?: string
 }
 
@@ -150,7 +146,7 @@ export function Playground() {
   ) => {
     const userId = requestedUserId.trim()
     if (!userId) {
-      setContextError("Enter a user UUID or pick a preset actor, then load context.")
+      setContextError("Choose a staging user, then load context.")
       return false
     }
 
@@ -277,13 +273,6 @@ export function Playground() {
     }
   }
 
-  const handleUserIdKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      e.preventDefault()
-      void loadUserContext()
-    }
-  }
-
   return (
     <div className="flex h-[calc(100vh-3rem)] min-h-0 flex-col gap-4">
       <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
@@ -307,10 +296,10 @@ export function Playground() {
                 <div className="flex h-full min-h-[12rem] items-center justify-center">
                   <div className="text-center text-muted-foreground">
                     <Bot className="mx-auto mb-4 size-12 opacity-50" />
-                    <p className="text-lg font-medium">Load a test account</p>
+                    <p className="text-lg font-medium">Load a staging user</p>
                     <p className="text-sm">
-                      Pick a preset actor or enter a UUID on the right, then load context. Chat runs on
-                      the playground core using that canonical user ID.
+                      Pick a staging user by name on the right, then load context. Chat runs on the
+                      playground core using that canonical user ID.
                     </p>
                   </div>
                 </div>
@@ -413,7 +402,7 @@ export function Playground() {
             <CardContent className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
               {actors.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-sm font-medium">Preset actors</p>
+                  <p className="text-sm font-medium">Staging user</p>
                   <Select
                     value={presetSelectValue}
                     onValueChange={(value) => {
@@ -422,11 +411,11 @@ export function Playground() {
                     }}
                   >
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Choose a preset…" />
+                      <SelectValue placeholder="Choose a staging user..." />
                     </SelectTrigger>
                     <SelectContent>
                       {actors.map((actor) => (
-                        <SelectItem key={actor.id} value={actor.id}>
+                        <SelectItem key={actor.id} value={actor.id} textValue={actor.label}>
                           {actor.label}
                         </SelectItem>
                       ))}
@@ -438,32 +427,14 @@ export function Playground() {
                 </div>
               )}
 
-              <Collapsible defaultOpen={actors.length === 0} className="space-y-2">
-                <CollapsibleTrigger asChild>
-                  <Button variant="outline" size="sm" type="button" className="flex w-full items-center justify-between gap-2">
-                    <span className="text-sm">Custom user ID</span>
-                    <ChevronDown className="size-4 shrink-0 opacity-60" />
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="space-y-2">
-                  <p className="text-xs text-muted-foreground">
-                    Paste any canonical UUID the playground core knows about (e.g. a staging-only test
-                    user).
-                  </p>
-                  <div className="flex gap-2">
-                    <Input
-                      value={draftUserId}
-                      onChange={(e) => setDraftUserId(e.target.value)}
-                      onKeyDown={handleUserIdKeyPress}
-                      placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                      disabled={isContextLoading}
-                    />
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
+              {actors.length === 0 && !actorsWarning && (
+                <div className="rounded-lg border border-dashed px-3 py-4 text-sm text-muted-foreground">
+                  No staging users found.
+                </div>
+              )}
 
               <div className="flex gap-2">
-                <Button onClick={() => void loadUserContext()} disabled={isContextLoading} className="flex-1">
+                <Button onClick={() => void loadUserContext()} disabled={isContextLoading || !draftUserId.trim()} className="flex-1">
                   {isContextLoading ? <Loader2 className="size-4 animate-spin" /> : "Load context"}
                 </Button>
               </div>
@@ -509,16 +480,13 @@ export function Playground() {
                       {contextData.user.aiPersona && (
                         <Badge variant="outline">Persona {contextData.user.aiPersona}</Badge>
                       )}
-                      <Badge variant={contextData.user.mongoProfile.exists ? "default" : "outline"}>
-                        {contextData.user.mongoProfile.exists ? "Mongo profile found" : "No Mongo profile"}
-                      </Badge>
                     </div>
 
                     <div className="mt-3 space-y-1 text-xs text-muted-foreground">
                       <p>
-                        Mongo timezone:{" "}
+                        Timezone:{" "}
                         <span className="text-foreground">
-                          {contextData.user.mongoProfile.timezone || "Not set"}
+                          {contextData.user.timezone || "Not set"}
                         </span>
                       </p>
                       <p>
@@ -575,14 +543,13 @@ export function Playground() {
                   )}
 
                   <div className="rounded-lg border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-                    Context and chat are served by the playground core deployment (staging data). The
-                    console dashboard elsewhere still uses production Supabase/Mongo.
+                    User options are loaded from staging Postgres. Context and chat are served by the
+                    playground core deployment (staging data).
                   </div>
                 </>
               ) : (
                 <div className="rounded-lg border border-dashed px-3 py-4 text-sm text-muted-foreground">
-                  Load context to inspect the user as seen by the playground core (Postgres + Mongo on
-                  that deployment).
+                  Load context to inspect the user as seen by the playground core.
                 </div>
               )}
             </CardContent>

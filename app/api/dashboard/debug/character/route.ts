@@ -1,9 +1,11 @@
 import { createHash, randomUUID } from "crypto"
 import { NextRequest, NextResponse } from "next/server"
+import * as fernet from "fernet"
 import { getSessionFromCookie } from "@/lib/session"
 import { connectStagingMongo, getStagingPrisma } from "@/lib/staging-database"
 
 type CharacterRequestBody = {
+  creation_mode?: "character" | "fresh_user"
   email?: string
   name?: string
   phone?: string
@@ -22,6 +24,25 @@ function hashValue(value: string) {
   return createHash("sha256").update(value, "utf8").digest("hex")
 }
 
+function encryptionKey() {
+  return (
+    process.env.PHONE_ENCRYPTION_KEY ||
+    process.env.ENCRYPTION_KEY ||
+    process.env.TOKEN_SECRET_KEY ||
+    ""
+  )
+}
+
+function encryptContent(value: string) {
+  const key = encryptionKey()
+  if (!key) {
+    return value
+  }
+
+  const token = new fernet.Token({ secret: new fernet.Secret(key), time: Date.now() / 1000 })
+  return token.encode(value)
+}
+
 function parseFutureDate(value: string | undefined) {
   const date = new Date(value || DEFAULT_SUBSCRIPTION_END)
   if (Number.isNaN(date.getTime())) {
@@ -37,20 +58,26 @@ export async function POST(request: NextRequest) {
     }
 
     const body = (await request.json()) as CharacterRequestBody
+    const creationMode = body.creation_mode === "fresh_user" ? "fresh_user" : "character"
     const email = body.email?.trim().toLowerCase() || null
     const name = body.name?.trim() || null
+    const phone = body.phone?.trim() || ""
     const timezone = body.timezone?.trim() || DEFAULT_TIMEZONE
     const aiPersona = body.ai_persona?.trim() || null
     const customInstruction = body.custom_instruction?.trim() || null
     const subscriptionStatus = body.subscription_status?.trim() || "active"
     const subscriptionPeriodEnd = parseFutureDate(body.subscription_period_end)
 
-    if (!email && !name && !body.phone?.trim()) {
+    if (creationMode === "fresh_user" && !phone) {
+      return NextResponse.json({ error: "Enter the phone number or WhatsApp sender identifier" }, { status: 400 })
+    }
+
+    if (creationMode === "character" && !email && !name && !phone) {
       return NextResponse.json({ error: "Enter at least an email, display name, or external identifier" }, { status: 400 })
     }
 
-    const phoneIdentifier = body.phone?.trim() || `character:${email || name || randomUUID()}`
-    const encryptedPhone = `debug:${hashValue(phoneIdentifier).slice(0, 16)}`
+    const phoneIdentifier = phone || `character:${email || name || randomUUID()}`
+    const encryptedPhone = encryptContent(phoneIdentifier)
     const hashedPhone = hashValue(phoneIdentifier)
     const prisma = getStagingPrisma()
 
@@ -72,6 +99,44 @@ export async function POST(request: NextRequest) {
         },
         { status: 409 }
       )
+    }
+
+    if (creationMode === "fresh_user") {
+      const user = await prisma.users.create({
+        data: {
+          encrypted_phone: encryptedPhone,
+          hashed_phone: hashedPhone,
+        },
+      })
+
+      const mongo = await connectStagingMongo()
+      if (!mongo.db) {
+        throw new Error("Staging Mongo connection did not expose a database handle")
+      }
+
+      await mongo.db.collection("users").insertOne({
+        user_id: user.id,
+        encrypted_phone: encryptedPhone,
+        hashed_phone: hashedPhone,
+        created_at: new Date(),
+        updated_at: new Date(),
+      })
+
+      return NextResponse.json({
+        data: {
+          mode: creationMode,
+          user: {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            phone: phoneIdentifier,
+            pin: null,
+            timezone: null,
+            aiPersona: user.ai_persona,
+            customInstruction: user.custom_instruction,
+          },
+        },
+      })
     }
 
     const user = await prisma.$transaction(async (tx) => {
@@ -133,10 +198,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       data: {
+        mode: creationMode,
         user: {
           id: user.id,
           email: user.email,
           name: user.name,
+          phone: phoneIdentifier,
           pin: CHARACTER_PIN,
           timezone,
           aiPersona,
