@@ -47,13 +47,19 @@ export async function GET(request: NextRequest) {
     }
 
     if (!upstream.ok) {
-      const detail =
-        typeof payload === "object" &&
-        payload !== null &&
-        "detail" in payload &&
-        typeof (payload as { detail: unknown }).detail === "string"
-          ? (payload as { detail: string }).detail
-          : upstream.statusText
+      const p = payload as {
+        detail?: unknown
+        init_error?: string
+      }
+      let detail =
+        typeof p.detail === "string"
+          ? p.detail
+          : Array.isArray(p.detail)
+            ? JSON.stringify(p.detail)
+            : upstream.statusText
+      if (typeof p.init_error === "string" && p.init_error.trim()) {
+        detail = `${detail}${detail ? "\n" : ""}${p.init_error.trim()}`
+      }
       return NextResponse.json(
         {
           error: upstream.status === 404 ? "User not found" : "Failed to load user context",
