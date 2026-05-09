@@ -118,14 +118,12 @@ export function Playground() {
   const [contextError, setContextError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isContextLoading, setIsContextLoading] = useState(false)
-  const [backendLabel, setBackendLabel] = useState<string>("playground core")
   const [actors, setActors] = useState<ActorsResponse["actors"]>([])
   const [actorsWarning, setActorsWarning] = useState<string | null>(null)
   const [isRecording, setIsRecording] = useState(false)
   const [mediaError, setMediaError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
-  const audioInputRef = useRef<HTMLInputElement>(null)
   const recorderRef = useRef<MediaRecorder | null>(null)
   const recordingChunksRef = useRef<Blob[]>([])
 
@@ -341,10 +339,6 @@ export function Playground() {
         throw new Error(`${data.error || "Failed to get response"}${errorDetails}${endpoint}`)
       }
 
-      if (data.backend_label) {
-        setBackendLabel(data.backend_label)
-      }
-
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
@@ -491,16 +485,6 @@ export function Playground() {
                   event.target.value = ""
                 }}
               />
-              <input
-                ref={audioInputRef}
-                type="file"
-                accept="audio/*"
-                className="hidden"
-                onChange={(event) => {
-                  handleMediaPick(event.target.files?.[0], "audio")
-                  event.target.value = ""
-                }}
-              />
               {draftMedia && (
                 <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2 text-sm">
                   <div className="flex min-w-0 items-center gap-2">
@@ -531,17 +515,6 @@ export function Playground() {
                 </Button>
                 <Button
                   type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={() => audioInputRef.current?.click()}
-                  disabled={isLoading || !activeUserId}
-                  className="shrink-0"
-                  title="Attach audio"
-                >
-                  <Mic className="size-4" />
-                </Button>
-                <Button
-                  type="button"
                   variant={isRecording ? "destructive" : "outline"}
                   size="icon"
                   onClick={isRecording ? stopRecording : startRecording}
@@ -568,10 +541,6 @@ export function Playground() {
                   {isLoading ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
                 </Button>
               </div>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Messages are proxied to the playground core with the loaded user ID. Backend host:{" "}
-                <span className="font-medium text-foreground">{backendLabel}</span>
-              </p>
             </CardContent>
           </Card>
         </div>
