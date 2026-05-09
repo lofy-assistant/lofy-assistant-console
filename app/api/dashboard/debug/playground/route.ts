@@ -46,7 +46,31 @@ function getBackendLabel(url: string) {
   }
 }
 
+function getFetchFailureDetails(error: unknown) {
+  if (!(error instanceof TypeError) || error.message !== "fetch failed") {
+    return null
+  }
+
+  const cause = (error as TypeError & { cause?: unknown }).cause
+  const code =
+    cause && typeof cause === "object" && "code" in cause
+      ? String((cause as { code?: unknown }).code)
+      : null
+
+  if (code === "ECONNREFUSED") {
+    return "Core API is not accepting connections. Start lofy-assistant-core or update CORE_API_URL."
+  }
+
+  if (code === "ECONNRESET") {
+    return "Core API closed the connection before responding. Check the core server logs for the failed request."
+  }
+
+  return "Core API request failed before a response was received."
+}
+
 export async function POST(request: NextRequest) {
+  let endpoint: string | null = null
+
   try {
     if (!(await getSessionFromCookie())) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -76,7 +100,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const endpoint = `${base}/standalone/chat`
+    endpoint = `${base}/standalone/chat`
 
     const requestPayload = {
       user_id: userId,
@@ -133,6 +157,19 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error("Error in playground API:", error)
+    const fetchFailureDetails = getFetchFailureDetails(error)
+
+    if (fetchFailureDetails) {
+      return NextResponse.json(
+        {
+          error: "Core API unavailable",
+          details: fetchFailureDetails,
+          endpoint,
+        },
+        { status: 503 }
+      )
+    }
+
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
