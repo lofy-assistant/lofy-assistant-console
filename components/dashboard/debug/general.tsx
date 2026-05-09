@@ -6,10 +6,21 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 
+type GeneralDebugResult = {
+    success?: boolean
+    message?: string
+    data?: {
+        user_id?: string
+        email?: string
+        subscription_status?: string
+        current_period_end?: string
+    }
+}
+
 export default function GeneralDebug() {
     const [email, setEmail] = useState("")
     const [loading, setLoading] = useState(false)
-    const [result, setResult] = useState<any>(null)
+    const [result, setResult] = useState<GeneralDebugResult | null>(null)
     const [error, setError] = useState<string | null>(null)
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -35,7 +46,7 @@ export default function GeneralDebug() {
                 setResult(data)
                 setEmail("")
             }
-        } catch (err) {
+        } catch {
             setError("An error occurred while updating subscription")
         } finally {
             setLoading(false)
@@ -79,10 +90,10 @@ export default function GeneralDebug() {
                         <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-md">
                             <p className="text-green-800 font-medium mb-2">{result.message}</p>
                             <div className="text-sm text-green-700 space-y-1">
-                                <p><strong>User ID:</strong> {result.data.user_id}</p>
-                                <p><strong>Email:</strong> {result.data.email}</p>
-                                <p><strong>Status:</strong> {result.data.subscription_status}</p>
-                                <p><strong>Expires:</strong> {new Date(result.data.current_period_end).toLocaleDateString()}</p>
+                                <p><strong>User ID:</strong> {result.data?.user_id}</p>
+                                <p><strong>Email:</strong> {result.data?.email}</p>
+                                <p><strong>Status:</strong> {result.data?.subscription_status}</p>
+                                <p><strong>Expires:</strong> {result.data?.current_period_end ? new Date(result.data.current_period_end).toLocaleDateString() : null}</p>
                             </div>
                         </div>
                     )}

@@ -96,6 +96,7 @@ model reminders {
   target_user_id  String?           @db.Uuid
   message         String
   reminder_time   DateTime          @db.Timestamptz(6)
+  timezone        String            @default("UTC")
   status          String
   created_at      DateTime          @default(now()) @db.Timestamptz(6)
   updated_at      DateTime          @updatedAt @db.Timestamptz(6)

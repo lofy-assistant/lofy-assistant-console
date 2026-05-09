@@ -49,7 +49,7 @@ export async function GET() {
       .map((md) => {
         try {
           return typeof md === 'string' ? (JSON.parse(md) as UserMetadata) : (md as UserMetadata)
-        } catch (e) {
+        } catch {
           return md as UserMetadata
         }
       })
