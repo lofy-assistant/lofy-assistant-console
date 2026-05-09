@@ -1,8 +1,9 @@
 /**
- * AI Playground — forwards chat to staging FastAPI only.
+ * AI Playground — forwards chat to the staging Core API only.
  * Does not query console DB; core resolves the user against its own staging data.
  *
- * Env: FASTAPI_URL (staging core base URL, no path) — optional fallbacks: PLAYGROUND_FASTAPI_URL, PLAYGROUND_CORE_BASE_URL
+ * Env: CORE_API_URL (staging core base URL, no path) — legacy fallbacks:
+ * FASTAPI_URL, PLAYGROUND_FASTAPI_URL, PLAYGROUND_CORE_BASE_URL
  */
 
 import { NextRequest, NextResponse } from "next/server"
@@ -70,7 +71,7 @@ export async function POST(request: NextRequest) {
     const base = getPlaygroundCoreBaseUrl()
     if (!base) {
       return NextResponse.json(
-        { error: "Playground core URL not configured (set FASTAPI_URL to your staging FastAPI base URL)" },
+        { error: "Core API URL not configured (set CORE_API_URL to your staging core base URL)" },
         { status: 503 }
       )
     }
@@ -95,9 +96,15 @@ export async function POST(request: NextRequest) {
       const errorText = await response.text()
       let detail = `${response.status} ${response.statusText}`
       try {
-        const errJson = JSON.parse(errorText) as { detail?: unknown }
+        const errJson = JSON.parse(errorText) as { detail?: unknown; message?: unknown; error?: unknown }
         if (typeof errJson.detail === "string") {
           detail = errJson.detail
+        } else if (typeof errJson.message === "string") {
+          detail = errJson.message
+        } else if (Array.isArray(errJson.message)) {
+          detail = errJson.message.join("\n")
+        } else if (typeof errJson.error === "string") {
+          detail = errJson.error
         }
       } catch {
         if (errorText) {

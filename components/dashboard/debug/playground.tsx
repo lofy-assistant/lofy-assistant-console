@@ -41,10 +41,6 @@ interface PlaygroundContextResponse {
       messageCount: number
       latestMessageAt: string | null
     }
-    conversationState: {
-      state: string | null
-      updatedAt: string | null
-    }
     recentMessages: Array<{
       id: string
       role: "user" | "assistant"
@@ -533,12 +529,6 @@ export function Playground() {
                         Latest activity:{" "}
                         <span className="text-foreground">
                           {formatDateTime(contextData.user.latestMessageAt)}
-                        </span>
-                      </p>
-                      <p>
-                        Conversation state:{" "}
-                        <span className="text-foreground">
-                          {contextData.conversationState.state || "unknown"}
                         </span>
                       </p>
                       <p>

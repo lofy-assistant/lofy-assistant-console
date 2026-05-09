@@ -97,6 +97,10 @@ const navMain = [
         title: "Playground",
         url: "/dashboard/debug/playground",
       },
+      {
+        title: "Character",
+        url: "/dashboard/debug/character",
+      },
     ],
   },
 ];

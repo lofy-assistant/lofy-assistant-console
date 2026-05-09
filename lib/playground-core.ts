@@ -1,15 +1,20 @@
 /**
- * FastAPI base URL for the AI playground (server-side proxy to core).
- * In console Vercel env this is typically `FASTAPI_URL` pointing at **staging** core;
+ * Core API base URL for staging (server-side proxy for playground/character debug tools).
+ * In console env this should be `CORE_API_URL` pointing at **staging** core;
  * dashboards still use DATABASE_URL / MONGODB_URI (production).
  */
 export function getPlaygroundCoreBaseUrl(): string {
   const raw =
+    process.env.CORE_API_URL?.trim() ||
     process.env.FASTAPI_URL?.trim() ||
     process.env.PLAYGROUND_FASTAPI_URL?.trim() ||
     process.env.PLAYGROUND_CORE_BASE_URL?.trim() ||
     ""
   return raw.endsWith("/") ? raw.slice(0, -1) : raw
+}
+
+export function getPlaygroundAdminSecret(): string {
+  return process.env.PLAYGROUND_ADMIN_SECRET?.trim() || ""
 }
 
 export function isValidUuid(value: string): boolean {

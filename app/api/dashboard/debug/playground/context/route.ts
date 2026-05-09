@@ -22,8 +22,8 @@ export async function GET(request: NextRequest) {
     if (!base) {
       return NextResponse.json(
         {
-          error: "Playground core URL not configured",
-          details: "Set FASTAPI_URL to your staging FastAPI base URL (same as playground chat).",
+          error: "Core API URL not configured",
+          details: "Set CORE_API_URL to your staging core base URL (same as playground chat).",
         },
         { status: 503 }
       )
