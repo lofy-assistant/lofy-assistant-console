@@ -204,6 +204,9 @@ model lofy_team {
 model llm_token_usage {
   id                          BigInt   @id @default(autoincrement())
   user_id                     String   @db.Uuid
+  event_id                    String?  @db.VarChar(100)
+  source                      String?  @db.VarChar(50)
+  provider                    String?  @db.VarChar(50)
   call_type                   String   @db.VarChar(50)
   model                       String   @db.VarChar(50)
   tokens_system_prompt        Int?
@@ -212,8 +215,22 @@ model llm_token_usage {
   tokens_tools_schema         Int?
   tokens_total_input          Int?
   tokens_total_output         Int?
+  tokens_total                Int?
+  tokens_cached_input         Int?
+  tokens_thoughts             Int?
+  tokens_tool_use_prompt      Int?
+  traffic_type                String?  @db.VarChar(50)
+  latency_ms                  Int?
+  status                      String   @default("success") @db.VarChar(30)
+  prompt_tokens_details       Json?
+  output_tokens_details       Json?
+  cache_tokens_details        Json?
+  tool_use_prompt_tokens_details Json?
+  raw_usage_metadata          Json?
   created_at                  DateTime @default(now()) @db.Timestamptz(6)
 
+  @@index([call_type], map: "idx_llm_token_usage_call_type")
   @@index([created_at], map: "idx_llm_token_usage_created_at")
+  @@index([source], map: "idx_llm_token_usage_source")
   @@index([user_id], map: "idx_llm_token_usage_user_id")
 }
