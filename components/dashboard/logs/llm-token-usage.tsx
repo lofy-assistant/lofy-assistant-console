@@ -21,8 +21,8 @@ export function LlmTokenUsageLog() {
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
-  const [filters, setFilters] = useState({ userId: '', model: '', callType: '', source: '', provider: '' });
-  const [searchFilters, setSearchFilters] = useState({ userId: '', model: '', callType: '', source: '', provider: '' });
+  const [filters, setFilters] = useState({ userId: '', model: '', callType: '' });
+  const [searchFilters, setSearchFilters] = useState({ userId: '', model: '', callType: '' });
 
   const pageSize = 50;
 
@@ -36,8 +36,6 @@ export function LlmTokenUsageLog() {
       if (searchFilters.userId) params.append('userId', searchFilters.userId);
       if (searchFilters.model) params.append('model', searchFilters.model);
       if (searchFilters.callType) params.append('callType', searchFilters.callType);
-      if (searchFilters.source) params.append('source', searchFilters.source);
-      if (searchFilters.provider) params.append('provider', searchFilters.provider);
 
       const response = await fetch(`/api/dashboard/logs/token-usage?${params}`);
       const result = await response.json();
@@ -65,8 +63,8 @@ export function LlmTokenUsageLog() {
   };
 
   const handleReset = () => {
-    setFilters({ userId: '', model: '', callType: '', source: '', provider: '' });
-    setSearchFilters({ userId: '', model: '', callType: '', source: '', provider: '' });
+    setFilters({ userId: '', model: '', callType: '' });
+    setSearchFilters({ userId: '', model: '', callType: '' });
     setPage(1);
   };
 
@@ -106,7 +104,7 @@ export function LlmTokenUsageLog() {
     <div className="space-y-4">
       {/* Filters */}
       <Card className="p-4">
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
           <Input
             placeholder="Filter by user ID..."
             value={filters.userId}
@@ -125,19 +123,7 @@ export function LlmTokenUsageLog() {
             onChange={(e) => setFilters({ ...filters, callType: e.target.value })}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
           />
-          <Input
-            placeholder="Source..."
-            value={filters.source}
-            onChange={(e) => setFilters({ ...filters, source: e.target.value })}
-            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-          />
-          <Input
-            placeholder="Provider..."
-            value={filters.provider}
-            onChange={(e) => setFilters({ ...filters, provider: e.target.value })}
-            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-          />
-          <div className="flex gap-2">
+          <div className="flex gap-2 md:col-span-2">
             <Button onClick={handleSearch} className="flex-1">
               Search
             </Button>
@@ -156,7 +142,6 @@ export function LlmTokenUsageLog() {
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Timestamp</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">User ID</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Source</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Call Type</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Model</th>
                 <th className="px-4 py-3 text-right text-xs font-semibold uppercase">Input Tokens</th>
@@ -178,15 +163,6 @@ export function LlmTokenUsageLog() {
                     </td>
                     <td className="px-4 py-3 text-xs font-mono text-muted-foreground">
                       {record.user_id.slice(0, 8)}...
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      {record.source ? (
-                        <span className="inline-flex items-center px-2 py-1 rounded-md bg-muted text-xs">
-                          {record.source}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
                     </td>
                     <td className="px-4 py-3 text-sm">
                       <span className="inline-flex items-center px-2 py-1 rounded-md bg-muted text-xs">
@@ -223,7 +199,7 @@ export function LlmTokenUsageLog() {
                   </tr>
                   {expandedRow === record.id && (
                     <tr className="bg-muted/20">
-                      <td colSpan={10} className="px-4 py-4">
+                      <td colSpan={9} className="px-4 py-4">
                         <div className="space-y-3">
                           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                             <div>
@@ -235,74 +211,18 @@ export function LlmTokenUsageLog() {
                               <p className="font-mono text-xs mt-1">{record.user_id}</p>
                             </div>
                             <div>
-                              <span className="font-semibold text-xs uppercase text-muted-foreground">Event ID</span>
-                              <p className="font-mono text-xs mt-1">{record.event_id ?? '—'}</p>
-                            </div>
-                            <div>
-                              <span className="font-semibold text-xs uppercase text-muted-foreground">Provider</span>
-                              <p className="font-mono text-xs mt-1">{record.provider ?? '—'}</p>
-                            </div>
-                            <div>
-                              <span className="font-semibold text-xs uppercase text-muted-foreground">Traffic</span>
-                              <p className="font-mono text-xs mt-1">{record.traffic_type ?? '—'}</p>
+                              <span className="font-semibold text-xs uppercase text-muted-foreground">Status</span>
+                              <p className="font-mono text-xs mt-1">{record.status}</p>
                             </div>
                           </div>
-                          <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-4 text-sm">
-                            <div className="rounded-md bg-muted p-3">
-                              <p className="text-xs text-muted-foreground mb-1">System Prompt</p>
-                              <p className="font-mono font-semibold">
-                                {record.tokens_system_prompt?.toLocaleString() ?? '—'}
-                              </p>
+                          {record.gemini_usage_snapshot != null && (
+                            <div className="rounded-md bg-muted/40 border p-3 text-xs">
+                              <p className="font-semibold text-muted-foreground mb-2 uppercase">Gemini usageMetadata</p>
+                              <pre className="font-mono whitespace-pre-wrap break-all overflow-x-auto max-h-64 overflow-y-auto">
+                                {JSON.stringify(record.gemini_usage_snapshot, null, 2)}
+                              </pre>
                             </div>
-                            <div className="rounded-md bg-muted p-3">
-                              <p className="text-xs text-muted-foreground mb-1">Session Context</p>
-                              <p className="font-mono font-semibold">
-                                {record.tokens_session_context?.toLocaleString() ?? '—'}
-                              </p>
-                            </div>
-                            <div className="rounded-md bg-muted p-3">
-                              <p className="text-xs text-muted-foreground mb-1">Conversation History</p>
-                              <p className="font-mono font-semibold">
-                                {record.tokens_conversation_history?.toLocaleString() ?? '—'}
-                              </p>
-                            </div>
-                            <div className="rounded-md bg-muted p-3">
-                              <p className="text-xs text-muted-foreground mb-1">Tools Schema</p>
-                              <p className="font-mono font-semibold">
-                                {record.tokens_tools_schema?.toLocaleString() ?? '—'}
-                              </p>
-                            </div>
-                            <div className="rounded-md bg-muted/60 border p-3">
-                              <p className="text-xs text-muted-foreground mb-1">Total Input</p>
-                              <p className="font-mono font-bold">
-                                {record.tokens_total_input?.toLocaleString() ?? '—'}
-                              </p>
-                            </div>
-                            <div className="rounded-md bg-muted/60 border p-3">
-                              <p className="text-xs text-muted-foreground mb-1">Total Output</p>
-                              <p className="font-mono font-bold">
-                                {record.tokens_total_output?.toLocaleString() ?? '—'}
-                              </p>
-                            </div>
-                            <div className="rounded-md bg-muted p-3">
-                              <p className="text-xs text-muted-foreground mb-1">Cached Input</p>
-                              <p className="font-mono font-semibold">
-                                {record.tokens_cached_input?.toLocaleString() ?? '—'}
-                              </p>
-                            </div>
-                            <div className="rounded-md bg-muted p-3">
-                              <p className="text-xs text-muted-foreground mb-1">Thinking</p>
-                              <p className="font-mono font-semibold">
-                                {record.tokens_thoughts?.toLocaleString() ?? '—'}
-                              </p>
-                            </div>
-                            <div className="rounded-md bg-muted p-3">
-                              <p className="text-xs text-muted-foreground mb-1">Tool Prompt</p>
-                              <p className="font-mono font-semibold">
-                                {record.tokens_tool_use_prompt?.toLocaleString() ?? '—'}
-                              </p>
-                            </div>
-                          </div>
+                          )}
                         </div>
                       </td>
                     </tr>

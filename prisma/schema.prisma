@@ -29,6 +29,7 @@ model users {
   feedbacks                  feedbacks[]
   integration_credentials    integration_credentials[]
   memories                   memories[]
+  knowledge_items            knowledge_items[]
   reminders                  reminders[]
   subscriptions              subscriptions[]
 
@@ -63,6 +64,22 @@ model memories {
 
   @@index([user_id])
   @@map("memories")
+}
+
+model knowledge_items {
+  id          BigInt   @id @default(autoincrement())
+  user_id     String   @db.Uuid
+  kind        String   @default("general")
+  content     String   @default("")
+  importance  Int      @db.SmallInt
+  embedding   Unsupported("vector")?
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @updatedAt @db.Timestamptz(6)
+  user        users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, kind], map: "knowledge_items_user_id_kind_key")
+  @@index([user_id], map: "knowledge_items_user_id_idx")
+  @@map("knowledge_items")
 }
 
 model calendar_events {
@@ -202,35 +219,19 @@ model lofy_team {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model llm_token_usage {
-  id                          BigInt   @id @default(autoincrement())
-  user_id                     String   @db.Uuid
-  event_id                    String?  @db.VarChar(100)
-  source                      String?  @db.VarChar(50)
-  provider                    String?  @db.VarChar(50)
-  call_type                   String   @db.VarChar(50)
-  model                       String   @db.VarChar(50)
-  tokens_system_prompt        Int?
-  tokens_session_context      Int?
-  tokens_conversation_history Int?
-  tokens_tools_schema         Int?
-  tokens_total_input          Int?
-  tokens_total_output         Int?
-  tokens_total                Int?
-  tokens_cached_input         Int?
-  tokens_thoughts             Int?
-  tokens_tool_use_prompt      Int?
-  traffic_type                String?  @db.VarChar(50)
-  latency_ms                  Int?
-  status                      String   @default("success") @db.VarChar(30)
-  prompt_tokens_details       Json?
-  output_tokens_details       Json?
-  cache_tokens_details        Json?
-  tool_use_prompt_tokens_details Json?
-  raw_usage_metadata          Json?
-  created_at                  DateTime @default(now()) @db.Timestamptz(6)
+  id                     BigInt   @id @default(autoincrement())
+  user_id                String   @db.Uuid
+  call_type              String   @db.VarChar(50)
+  model                  String   @db.VarChar(50)
+  tokens_total_input     Int?
+  tokens_total_output    Int?
+  tokens_total           Int?
+  latency_ms             Int?
+  gemini_usage_snapshot  Json?
+  status                 String   @default("success") @db.VarChar(30)
+  created_at             DateTime @default(now()) @db.Timestamptz(6)
 
   @@index([call_type], map: "idx_llm_token_usage_call_type")
   @@index([created_at], map: "idx_llm_token_usage_created_at")
-  @@index([source], map: "idx_llm_token_usage_source")
   @@index([user_id], map: "idx_llm_token_usage_user_id")
 }
