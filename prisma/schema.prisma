@@ -20,6 +20,7 @@ model users {
   updated_at                 DateTime                  @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @updatedAt @db.Timestamptz(6)
   ai_persona                 String?
   custom_instruction         String?
+  timezone                   String?
   email_verification_expires DateTime?                 @db.Timestamptz(6)
   email_verification_token   String?
   email_verified             Boolean                   @default(false)
@@ -117,6 +118,7 @@ model reminders {
   status          String
   created_at      DateTime          @default(now()) @db.Timestamptz(6)
   updated_at      DateTime          @updatedAt @db.Timestamptz(6)
+  deleted_at      DateTime?         @db.Timestamptz(6)
   recurrence      String?
   next_recurrence DateTime?         @db.Timestamptz(6)
   calendar_events calendar_events[]
