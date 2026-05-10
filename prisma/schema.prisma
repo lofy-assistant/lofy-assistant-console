@@ -10,7 +10,7 @@ datasource db {
 model users {
   id                         String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   encrypted_phone            String
-  hashed_phone               String
+  hashed_phone               String                    @unique
   pin                        String?
   email                      String?                   @unique
   name                       String?
