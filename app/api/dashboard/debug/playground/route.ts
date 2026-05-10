@@ -2,8 +2,7 @@
  * AI Playground — forwards chat to the staging Core API only.
  * Does not query console DB; core resolves the user against its own staging data.
  *
- * Env: CORE_API_URL (staging core base URL, no path) — legacy fallbacks:
- * FASTAPI_URL, PLAYGROUND_FASTAPI_URL, PLAYGROUND_CORE_BASE_URL
+ * Env: CORE_API_URL (staging core base URL, no trailing path).
  */
 
 import { NextRequest, NextResponse } from "next/server"

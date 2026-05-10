@@ -1,15 +1,9 @@
 /**
  * Core API base URL for staging (server-side proxy for playground/character debug tools).
- * In console env this should be `CORE_API_URL` pointing at **staging** core;
- * dashboards still use DATABASE_URL / MONGODB_URI (production).
+ * Set `CORE_API_URL` to the staging core origin (no path). Dashboards use production DB envs.
  */
 export function getPlaygroundCoreBaseUrl(): string {
-  const raw =
-    process.env.CORE_API_URL?.trim() ||
-    process.env.FASTAPI_URL?.trim() ||
-    process.env.PLAYGROUND_FASTAPI_URL?.trim() ||
-    process.env.PLAYGROUND_CORE_BASE_URL?.trim() ||
-    ""
+  const raw = process.env.CORE_API_URL?.trim() || ""
   return raw.endsWith("/") ? raw.slice(0, -1) : raw
 }
 
