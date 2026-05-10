@@ -225,7 +225,6 @@ model llm_token_usage {
   model                  String   @db.VarChar(50)
   tokens_total_input     Int?
   tokens_total_output    Int?
-  tokens_total           Int?
   latency_ms             Int?
   gemini_usage_snapshot  Json?
   status                 String   @default("success") @db.VarChar(30)

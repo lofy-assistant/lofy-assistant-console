@@ -179,7 +179,7 @@ export function LlmTokenUsageLog() {
                       {record.tokens_total_output?.toLocaleString() ?? '—'}
                     </td>
                     <td className="px-4 py-3 text-sm text-right font-mono">
-                      {record.tokens_total?.toLocaleString() ?? ((record.tokens_total_input ?? 0) + (record.tokens_total_output ?? 0)).toLocaleString()}
+                      {((record.tokens_total_input ?? 0) + (record.tokens_total_output ?? 0)).toLocaleString()}
                     </td>
                     <td className="px-4 py-3 text-sm text-right font-mono">
                       {record.latency_ms != null ? `${record.latency_ms.toLocaleString()} ms` : '—'}

@@ -8,7 +8,6 @@ export interface LlmTokenUsageRecord {
   model: string;
   tokens_total_input: number | null;
   tokens_total_output: number | null;
-  tokens_total: number | null;
   latency_ms: number | null;
   gemini_usage_snapshot?: unknown | null;
   status: string;
