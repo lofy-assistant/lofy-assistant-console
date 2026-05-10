@@ -50,6 +50,8 @@ export async function GET(request: NextRequest) {
       const p = payload as {
         detail?: unknown
         init_error?: string
+        message?: string
+        hint?: string
       }
       let detail =
         typeof p.detail === "string"
@@ -57,6 +59,12 @@ export async function GET(request: NextRequest) {
           : Array.isArray(p.detail)
             ? JSON.stringify(p.detail)
             : upstream.statusText
+      if (typeof p.message === "string" && p.message.trim()) {
+        detail = p.message.trim()
+      }
+      if (typeof p.hint === "string" && p.hint.trim()) {
+        detail = detail ? `${detail}\n\n${p.hint.trim()}` : p.hint.trim()
+      }
       if (typeof p.init_error === "string" && p.init_error.trim()) {
         detail = `${detail}${detail ? "\n" : ""}${p.init_error.trim()}`
       }
